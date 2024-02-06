@@ -16,47 +16,5 @@
     "name": "Downtown Dolphin",
     "map_id": "2",
     "map": "Crit City"
-  },
-  {
-    "id": "4",
-    "name": "Casse-Pattes",
-    "map_id": "3",
-    "map": "France"
-  },
-  {
-    "id": "5",
-    "name": "Douce France",
-    "map_id": "3",
-    "map": "France"
-  },
-  {
-    "id": "6",
-    "name": "La Reine",
-    "map_id": "3",
-    "map": "France"
-  },
-  {
-    "id": "7",
-    "name": "Petit Boucle",
-    "map_id": "3",
-    "map": "France"
-  },
-  {
-    "id": "8",
-    "name": "R.G.V.",
-    "map_id": "3",
-    "map": "France"
-  },
-  {
-    "id": "9",
-    "name": "Roule Ma Poule",
-    "map_id": "3",
-    "map": "France"
-  },
-  {
-    "id": "10",
-    "name": "Tire-Bouchon",
-    "map_id": "3",
-    "map": "France"
   }
 ]

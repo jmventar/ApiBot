@@ -1,0 +1,67 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ApiBot single_replace dict",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-c", "-f", "${workspaceFolder}/data/single_replace_dict.json"]
+    },
+    {
+      "name": "ApiBot single_replace list",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-c", "-f", "${workspaceFolder}/data/single_replace_lists.json"]
+    },
+    {
+      "name": "ApiBot single_replace + call",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "-c",
+        "-f",
+        "${workspaceFolder}/data/single_replace_lists.json",
+        "-u",
+        "https://github.com/{{0}}"
+      ]
+    },
+    {
+      "name": "ApiBot multiple replace",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "-f",
+        "${workspaceFolder}/data/multiple_replace.json",
+        "-m",
+        "GET",
+        "-u",
+        "https://google.com/{{id}}/{{name}}/{{map_id}}/{{map}}",
+        "-t",
+        "123456",
+        "-d",
+        "2.5"
+      ]
+    },
+    {
+      "name": "run all test",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-f", "${workspaceFolder}/data/example_input.json"]
+    }
+  ]
+}
