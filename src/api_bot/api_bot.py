@@ -64,6 +64,9 @@ class APIRunner:
                     if response is not None:
                         self.log_response(method, current_url, count, response)
 
+                    if count % 50 == 0:
+                        self.show_progress(count, len(self.elements))
+
                     if delay > 0:
                         time.sleep(delay)
 
@@ -80,6 +83,14 @@ class APIRunner:
             + f": {response.status_code}"
             + Style.RESET_ALL
             + f" content {result_content} {result_length}"
+        )
+
+    @staticmethod
+    def show_progress(count: int, total: int):
+        percent = (count / total) * 100
+        percent = round(percent, 2)
+        logging.info(
+            f"{Fore.YELLOW} Progress {count} / {total} : {percent}% {Fore.RESET}"
         )
 
     @staticmethod
