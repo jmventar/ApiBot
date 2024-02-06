@@ -61,7 +61,7 @@
           },
           "cwd": "${workspaceFolder}"
         },
-        "command": "pip freeze > requirements.txt"
+        "command": ".\\.venv\\Scripts\\activate.bat && pip freeze > requirements.txt && deactivate .venv"
       },
       "problemMatcher": []
     }
