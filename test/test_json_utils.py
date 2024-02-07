@@ -1,7 +1,7 @@
 import os
 import json
 
-from src.utils.json_utils import load_config, store_config, arrays_to_set
+from src.utils.json_utils import parse, store, cleanup
 
 
 def test_load_config():
@@ -12,7 +12,7 @@ def test_load_config():
         json.dump(data, f)
 
     # Act
-    result = load_config(filename)
+    result = parse(filename)
 
     # Assert
     assert result == data
@@ -27,7 +27,7 @@ def test_store_config():
     data = {"key": "value"}
 
     # Act
-    store_config(filename, data)
+    store(filename, data)
 
     # Assert
     with open(filename, "r") as f:
@@ -51,7 +51,7 @@ def test_arrays_to_set():
         json.dump(data, f)
 
     # Act
-    result = arrays_to_set(filename)
+    result = cleanup(filename)
 
     # Assert
     assert len(result) == 9
