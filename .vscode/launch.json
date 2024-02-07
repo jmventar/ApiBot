@@ -35,6 +35,22 @@
       ]
     },
     {
+      "name": "ApiBot single replace dry run",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "--dry",
+        "-c",
+        "-f",
+        "${workspaceFolder}/data/single_replace_lists.json",
+        "-u",
+        "https://google.com/{{0}}"
+      ]
+    },
+    {
       "name": "ApiBot multiple replace + call",
       "type": "debugpy",
       "request": "launch",
