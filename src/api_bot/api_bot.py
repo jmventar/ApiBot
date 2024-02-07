@@ -10,45 +10,35 @@ from requests.exceptions import RequestException
 
 
 class APIRunner:
-    def __init__(self, args, elements):
+    def __init__(self, args, elements, placeholders):
         self.args = args
         self.elements = elements
+        self.placeholders = placeholders
 
-    def find_elements_to_replace(self):
-        return re.findall(r"{{(.*?)}}", self.args.url)
-
-    def replace_elements(self, placeholders, value):
+    def replace_elements(self, value):
         current_url = self.args.url
 
-        if len(placeholders) < 1:
-            logging.info(f"No elements to replace on URL ({self.args.url}), exit")
-            return
-
-        if len(placeholders) == 1:
+        if len(self.placeholders) == 1:
             current_url = current_url.replace("0", str(value))
         else:
-            for p in placeholders:
+            for p in self.placeholders:
                 current_url = current_url.replace(f"{p}", value[p])
 
         return current_url.replace(r"{{", "").replace(r"}}", "")
 
     def run(self):
-        if self.args.dry:
+        if self.args.dry or self.args.url is None:
             logging.info(f"{Fore.YELLOW} dry-run, skip requests")
-            exit(0)
-        if self.args.url is None:
-            logging.info(f"{Fore.YELLOW} No url provided, skip requests")
             exit(0)
         else:
             method = self.args.method.upper()
             delay = self.args.delay
-            placeholders = self.find_elements_to_replace()
 
             with requests.Session() as session:
                 session.headers.update({"Authorization": f"Bearer {self.args.token}"})
 
                 for count, elem in enumerate(self.elements, start=1):
-                    current_url = self.replace_elements(placeholders, elem)
+                    current_url = self.replace_elements(elem)
                     response = self.execute(method, current_url, session.headers, None)
 
                     if response is not None:
@@ -101,8 +91,26 @@ class APIRunner:
             return Fore.RED
 
 
+def find_placeholders(url: str):
+    if url is None:
+        return
+
+    placeholders = re.findall(r"{{(.*?)}}", url)
+
+    placeholder_length = len(placeholders)
+
+    if placeholder_length < 1:
+        logging.error(f"No elements to replace on URL ({url})")
+        exit(1)
+
+    return placeholders
+
+
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        epilog="To avoid make request, use --dry for dry run or don't specify -u URL"
+    )
+
     parser.add_argument("--file", "-f", type=str, required=True)
     parser.add_argument("--clean", "-c", action="store_true", required=False)
     parser.add_argument(
@@ -113,9 +121,22 @@ def parse_args():
         default="json",
         choices=["json", "csv"],
     )
-    parser.add_argument("--method", "-m", type=str, required=False, default="GET")
-    parser.add_argument("--url", "-u", type=str, required=False)
-    parser.add_argument("--token", "-t", type=str, required=False)
-    parser.add_argument("--delay", "-d", type=float, required=False, default=0)
+
     parser.add_argument("--dry", action="store_true", required=False)
-    return parser.parse_args()
+    url_group = parser.add_argument_group()
+    url_group.add_argument("--method", "-m", type=str, required=False, default="GET")
+    url_group.add_argument("--url", "-u", type=str, required=False)
+    url_group.add_argument("--token", "-t", type=str, required=False)
+    url_group.add_argument("--delay", "-d", type=float, required=False, default=0)
+
+    args = parser.parse_args()
+
+    # Execute args validations
+    if args.clean is True and args.source == "csv":
+        logging.error(
+            f"Invalid arguments provided, {Fore.RED}-c --clean{Fore.RESET} and {Fore.RED}-s --source csv{Fore.RESET}."
+        )
+        logging.warn("Can not clean csv duplicates")
+        exit(1)
+
+    return args

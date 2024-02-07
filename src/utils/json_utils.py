@@ -1,7 +1,7 @@
 import json
 
 
-def load_config(filename: str):
+def parse(filename: str):
     with open(filename) as jsonfile:
         data = json.load(jsonfile)
         print(f"Read successful {filename}")
@@ -9,15 +9,16 @@ def load_config(filename: str):
         return data
 
 
-def store_config(filename: str, data):
+def store(filename: str, data):
     with open(filename, "w") as jsonfile:
         json.dump(data, jsonfile)
         print(f"Write successful {filename}")
         jsonfile.close()
 
 
-def arrays_to_set(filename):
-    json_data = load_config(filename)
+# TODO this is a crap, specific method also on replace for single elements != all CSV + multiple JSON
+def cleanup(filename):
+    json_data = parse(filename)
 
     all_arrays = (
         [v for item in json_data for k, v in item.items()]
