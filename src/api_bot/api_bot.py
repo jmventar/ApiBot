@@ -1,5 +1,4 @@
 import argparse
-import json
 import logging
 import re
 import time
@@ -8,25 +7,12 @@ from datetime import datetime
 import requests
 from colorama import Fore, Style
 from requests.exceptions import RequestException
-from utils.json_utils import load_config
 
 
 class APIRunner:
-    def __init__(self, args):
+    def __init__(self, args, elements):
         self.args = args
-        self.elements = (
-            self.arrays_to_set() if self.args.clean else load_config(self.args.file)
-        )
-
-    def arrays_to_set(self):
-        with open(self.args.file, "r") as file:
-            json_data = json.load(file)
-            all_arrays = (
-                [v for item in json_data for k, v in item.items()]
-                if isinstance(json_data[0], dict)
-                else [val for array in json_data for val in array]
-            )
-        return set(all_arrays)
+        self.elements = elements
 
     def find_elements_to_replace(self):
         return re.findall(r"{{(.*?)}}", self.args.url)

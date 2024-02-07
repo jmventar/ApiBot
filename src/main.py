@@ -1,6 +1,7 @@
 import logging
 
 from colorama import init, Fore
+from utils.json_utils import load_config, arrays_to_set
 
 
 def main_api_bot():
@@ -12,7 +13,12 @@ def main_api_bot():
     init()
     logging.basicConfig(level=logging.INFO)
 
-    runner = APIRunner(args)
+    if args.clean is True:
+        elements = arrays_to_set(args.file)
+    else:
+        elements = load_config(args.file)
+
+    runner = APIRunner(args, elements)
     logging.info(
         f"Executing {Fore.YELLOW} {len(runner.elements)} {Fore.RESET} requests, for elements:"
     )
