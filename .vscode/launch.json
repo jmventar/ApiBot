@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "ApiBot single_replace dict",
+      "name": "ApiBot single replace dict",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -11,7 +11,7 @@
       "args": ["-c", "-f", "${workspaceFolder}/data/single_replace_dict.json"]
     },
     {
-      "name": "ApiBot single_replace list",
+      "name": "ApiBot single replace list",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -20,7 +20,7 @@
       "args": ["-c", "-f", "${workspaceFolder}/data/single_replace_lists.json"]
     },
     {
-      "name": "ApiBot single_replace + call",
+      "name": "ApiBot single replace + call",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -31,11 +31,11 @@
         "-f",
         "${workspaceFolder}/data/single_replace_lists.json",
         "-u",
-        "https://github.com/{{0}}"
+        "https://google.com/{{0}}"
       ]
     },
     {
-      "name": "ApiBot multiple replace",
+      "name": "ApiBot multiple replace + call",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
