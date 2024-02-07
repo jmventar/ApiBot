@@ -33,8 +33,12 @@ class APIRunner:
         return current_url.replace(r"{{", "").replace(r"}}", "")
 
     def run(self):
+        if self.args.dry:
+            logging.info(f"{Fore.YELLOW} dry-run, skip requests")
+            exit(0)
         if self.args.url is None:
-            logging.info(f"{Fore.YELLOW} No url provided, finish program")
+            logging.info(f"{Fore.YELLOW} No url provided, skip requests")
+            exit(0)
         else:
             method = self.args.method.upper()
             delay = self.args.delay
@@ -113,4 +117,5 @@ def parse_args():
     parser.add_argument("--url", "-u", type=str, required=False)
     parser.add_argument("--token", "-t", type=str, required=False)
     parser.add_argument("--delay", "-d", type=float, required=False, default=0)
+    parser.add_argument("--dry", action="store_true", required=False)
     return parser.parse_args()
