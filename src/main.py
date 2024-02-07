@@ -1,11 +1,10 @@
 import logging
 
 from colorama import init, Fore
-from utils.json_utils import load_config, arrays_to_set
 
 
 def main_api_bot():
-    from api_bot.api_bot import APIRunner, parse_args
+    from api_bot.api_bot import APIRunner, parse_args, find_placeholders
 
     args = parse_args()
 
@@ -13,15 +12,23 @@ def main_api_bot():
     init()
     logging.basicConfig(level=logging.INFO)
 
-    if args.clean is True:
-        elements = arrays_to_set(args.file)
-    else:
-        elements = load_config(args.file)
+    placeholders = find_placeholders(args.url)
 
-    runner = APIRunner(args, elements)
-    logging.info(
-        f"Executing {Fore.YELLOW} {len(runner.elements)} {Fore.RESET} requests, for elements:"
-    )
+    if args.source == "csv":
+        from utils.csv_utils import parse
+
+        elements = parse(args.file)
+    else:
+        from utils.json_utils import parse, cleanup
+
+        # Only cleans simple lists / dicts
+        if args.clean is True and len(placeholders) == 1:
+            elements = cleanup(args.file)
+        else:
+            elements = parse(args.file)
+
+    runner = APIRunner(args, elements, placeholders)
+    logging.info(f"Given {Fore.YELLOW}{len(runner.elements)}{Fore.RESET} elements:")
     logging.info(f"{runner.elements}")
     runner.run()
     exit(0)

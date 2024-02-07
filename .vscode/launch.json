@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "ApiBot single replace dict",
+      "name": "ApiBot JSON single replace dict",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -11,7 +11,7 @@
       "args": ["-c", "-f", "${workspaceFolder}/data/single_replace_dict.json"]
     },
     {
-      "name": "ApiBot single replace list",
+      "name": "ApiBot JSON single replace list",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -20,22 +20,7 @@
       "args": ["-c", "-f", "${workspaceFolder}/data/single_replace_lists.json"]
     },
     {
-      "name": "ApiBot single replace + call",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/src/main.py",
-      "console": "integratedTerminal",
-      "justMyCode": true,
-      "args": [
-        "-c",
-        "-f",
-        "${workspaceFolder}/data/single_replace_lists.json",
-        "-u",
-        "https://google.com/{{0}}"
-      ]
-    },
-    {
-      "name": "ApiBot single replace dry run",
+      "name": "ApiBot CSV + dry",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -43,6 +28,52 @@
       "justMyCode": true,
       "args": [
         "--dry",
+        "-f",
+        "${workspaceFolder}/data/multiple_replace.csv",
+        "-s",
+        "csv"
+      ]
+    },
+    {
+      "name": "ApiBot CSV + call",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "-f",
+        "${workspaceFolder}/data/single_replace.csv",
+        "-u",
+        "https://google.com/{{replace_1}}",
+        "-s",
+        "csv"
+      ]
+    },
+    {
+      "name": "ApiBot CSV multiple + call",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "-f",
+        "${workspaceFolder}/data/multiple_replace.csv",
+        "-u",
+        "https://google.com/{{replace_1}}/{{replace_2}}/{{replace_3}}",
+        "-s",
+        "csv"
+      ]
+    },
+    {
+      "name": "ApiBot JSON single replace + call",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
         "-c",
         "-f",
         "${workspaceFolder}/data/single_replace_lists.json",
@@ -51,13 +82,14 @@
       ]
     },
     {
-      "name": "ApiBot multiple replace + call",
+      "name": "ApiBot JSON multiple replace + call",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
       "args": [
+        "-c",
         "-f",
         "${workspaceFolder}/data/multiple_replace.json",
         "-m",
