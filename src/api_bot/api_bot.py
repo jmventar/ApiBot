@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import re
 import time
@@ -14,6 +15,7 @@ class APIRunner:
         self.args = args
         self.elements = elements
         self.placeholders = placeholders
+        self.response_data = []
 
     def replace_elements(self, value):
         current_url = self.args.url
@@ -50,6 +52,10 @@ class APIRunner:
                     if delay > 0:
                         time.sleep(delay)
 
+            with open("data/results.json", "a") as jsonfile:
+                json.dump(self.response_data, jsonfile)
+                jsonfile.close()
+
     def log_response(self, method, url, count, response):
         current_date_and_time = datetime.now()
         result_content = response.headers.get("content-type")
@@ -64,6 +70,10 @@ class APIRunner:
             + Style.RESET_ALL
             + f" content {result_content} {result_length}"
         )
+
+        if self.args.response_stored and "json" in response.headers["content-type"]:
+            logging.info(f"{response.json()}")
+            self.response_data.extend(response.json())
 
     @staticmethod
     def show_progress(count: int, total: int):
@@ -125,6 +135,9 @@ def parse_args():
     parser.add_argument("--dry", action="store_true", required=False)
     url_group = parser.add_argument_group()
     url_group.add_argument("--method", "-m", type=str, required=False, default="GET")
+    url_group.add_argument(
+        "--response-stored", "-r", action="store_true", required=False
+    )
     url_group.add_argument("--url", "-u", type=str, required=False)
     url_group.add_argument("--token", "-t", type=str, required=False)
     url_group.add_argument("--delay", "-d", type=float, required=False, default=0)
