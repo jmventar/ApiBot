@@ -1,10 +1,52 @@
+import argparse
+import datetime
 import logging
 
-from colorama import init, Fore
+from colorama import Fore, init
+from utils.json_utils import store
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        epilog="To avoid make request, use --dry for dry run or don't specify -u URL"
+    )
+
+    parser.add_argument("--file", "-f", type=str, required=True)
+    parser.add_argument("--clean", action="store_true", required=False)
+    parser.add_argument(
+        "--source",
+        "-s",
+        type=str,
+        required=False,
+        default="json",
+        choices=["json", "csv"],
+    )
+
+    parser.add_argument("--dry", action="store_true", required=False)
+    url_group = parser.add_argument_group()
+    url_group.add_argument("--method", "-m", type=str, required=False, default="GET")
+    url_group.add_argument(
+        "--response-stored", "-r", action="store_true", required=False
+    )
+    url_group.add_argument("--url", "-u", type=str, required=False)
+    url_group.add_argument("--token", "-t", type=str, required=False)
+    url_group.add_argument("--delay", "-d", type=float, required=False, default=0)
+
+    args = parser.parse_args()
+
+    # Execute args validations
+    if args.clean is True and args.source == "csv":
+        logging.error(
+            f"Invalid arguments provided, {Fore.RED}-c --clean{Fore.RESET} and {Fore.RED}-s --source csv{Fore.RESET}."
+        )
+        logging.warn("Can not clean csv duplicates")
+        exit(1)
+
+    return args
 
 
 def main_api_bot():
-    from api_bot.api_bot import APIRunner, parse_args, find_placeholders
+    from api_bot.api_bot import ApiBot, find_placeholders
 
     args = parse_args()
 
@@ -19,7 +61,7 @@ def main_api_bot():
 
         elements = parse(args.file)
     else:
-        from utils.json_utils import parse, cleanup
+        from utils.json_utils import cleanup, parse
 
         # Only cleans simple lists / dicts
         if args.clean is True and len(placeholders) == 1:
@@ -27,10 +69,12 @@ def main_api_bot():
         else:
             elements = parse(args.file)
 
-    runner = APIRunner(args, elements, placeholders)
+    runner = ApiBot(args, elements, placeholders)
     logging.info(f"Given {Fore.YELLOW}{len(runner.elements)}{Fore.RESET} elements:")
     logging.info(f"{runner.elements}")
-    runner.run()
+    (result, log_data) = runner.run()
+    store(f"data/log_{datetime.date.today()}.json", log_data, "w")
+    store(f"data/result_{datetime.date.today()}.json", result, "w")
     exit(0)
 
 
