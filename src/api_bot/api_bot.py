@@ -4,9 +4,10 @@ import time
 from datetime import datetime
 
 import requests
-from api_bot.response_log import ResponseLog
 from colorama import Fore, Style
 from requests.exceptions import RequestException
+
+from api_bot.response_log import ResponseLog
 
 
 class ApiBot:
@@ -66,12 +67,11 @@ class ApiBot:
             + f"{response.status_code}{Style.RESET_ALL} content {result_content} {result_length}"
         )
 
-        if self.args.response_stored and "json" in response.headers["content-type"]:
+        if "json" in response.headers["content-type"]:
             logging.info(f"{response.json()}")
             log_data = ResponseLog(response)
             self.response_log.append(log_data.to_json())
-
-    #            self.response_data.extend(response_log)
+            self.response_data.extend(response.json())
 
     @staticmethod
     def show_progress(count: int, total: int):
@@ -101,7 +101,7 @@ class ApiBot:
 
 def find_placeholders(url: str):
     if url is None:
-        return
+        return ["0"]
 
     placeholders = re.findall(r"{{(.*?)}}", url)
 
