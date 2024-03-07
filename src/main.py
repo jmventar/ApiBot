@@ -21,16 +21,14 @@ def parse_args():
         default="json",
         choices=["json", "csv"],
     )
-
     parser.add_argument("--dry", action="store_true", required=False)
+
     url_group = parser.add_argument_group()
     url_group.add_argument("--method", "-m", type=str, required=False, default="GET")
-    url_group.add_argument(
-        "--response-stored", "-r", action="store_true", required=False
-    )
     url_group.add_argument("--url", "-u", type=str, required=False)
     url_group.add_argument("--token", "-t", type=str, required=False)
     url_group.add_argument("--delay", "-d", type=float, required=False, default=0)
+    url_group.add_argument("--avoid-storage", action="store_true", required=False)
 
     args = parser.parse_args()
 
@@ -73,8 +71,9 @@ def main_api_bot():
     logging.info(f"Given {Fore.YELLOW}{len(runner.elements)}{Fore.RESET} elements:")
     logging.info(f"{runner.elements}")
     (result, log_data) = runner.run()
-    store(f"data/log_{datetime.date.today()}.json", log_data, "w")
-    store(f"data/result_{datetime.date.today()}.json", result, "w")
+    if not args.avoid_storage:
+        store(f"data/log_{datetime.date.today()}.json", log_data)
+        store(f"data/result_{datetime.date.today()}.json", result)
     exit(0)
 
 

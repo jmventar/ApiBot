@@ -28,21 +28,6 @@
       ]
     },
     {
-      "name": "ApiBot CSV + dry",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/src/main.py",
-      "console": "integratedTerminal",
-      "justMyCode": true,
-      "args": [
-        "--dry",
-        "-f",
-        "${workspaceFolder}/data/multiple_replace.csv",
-        "-s",
-        "csv"
-      ]
-    },
-    {
       "name": "ApiBot CSV single call",
       "type": "debugpy",
       "request": "launch",
@@ -71,8 +56,7 @@
         "-u",
         "https://google.com/{{replace_1}}/{{replace_2}}/{{replace_3}}",
         "-s",
-        "csv",
-        "-r"
+        "csv"
       ]
     },
     {
@@ -87,8 +71,7 @@
         "-f",
         "${workspaceFolder}/data/single_replace_lists.json",
         "-u",
-        "https://jsonplaceholder.typicode.com/posts/{{0}}",
-        "-r"
+        "https://jsonplaceholder.typicode.com/posts/{{0}}"
       ]
     },
     {
@@ -109,8 +92,7 @@
         "-t",
         "123456",
         "-d",
-        "2.5",
-        "-r"
+        "2.5"
       ]
     }
   ]
