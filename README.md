@@ -19,7 +19,7 @@ Check `launch.json` for automated runs using **Visual Studio Code**
 - `--dry` dry run, run without executing requests
 
 - `--method METHOD, -m METHOD` request method, default **GET**
-- `--response-stored, -r` it will store a resonse in data folder with result\_{current_date}.json
+- `--avoid-storage` don't create result\_{current_date}.json file and log\_{current_date}.json files. **false by default.**
 - `--url URL, -u URL` url to make the requests
 - `--token TOKEN, -t TOKEN` bearer token if needed
 - `--delay DELAY, -d DELAY` delay between requests in seconds, accepts deciaml values

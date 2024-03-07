@@ -8,8 +8,7 @@ def test_load_config():
     # Arrange
     filename = "test.json"
     data = {"key": "value"}
-    with open(filename, "w") as f:
-        json.dump(data, f)
+    store(filename, data)
 
     # Act
     result = parse(filename)
@@ -21,7 +20,7 @@ def test_load_config():
     os.remove(filename)
 
 
-def test_store_config():
+def test_store_overwrite_config():
     # Arrange
     filename = "test.json"
     data = {"key": "value"}
