@@ -1,26 +1,26 @@
-import argparse
-import json
 import logging
 import re
 import time
 from datetime import datetime
 
 import requests
+from api_bot.response_log import ResponseLog
 from colorama import Fore, Style
 from requests.exceptions import RequestException
 
 
-class APIRunner:
+class ApiBot:
     def __init__(self, args, elements, placeholders):
         self.args = args
         self.elements = elements
         self.placeholders = placeholders
         self.response_data = []
+        self.response_log = []
 
     def replace_elements(self, value):
         current_url = self.args.url
 
-        if len(self.placeholders) == 1:
+        if (self.args.source != "csv") and (len(self.placeholders) == 1):
             current_url = current_url.replace("0", str(value))
         else:
             for p in self.placeholders:
@@ -52,9 +52,8 @@ class APIRunner:
                     if delay > 0:
                         time.sleep(delay)
 
-            with open("data/results.json", "a") as jsonfile:
-                json.dump(self.response_data, jsonfile)
-                jsonfile.close()
+            # Return log
+            return (self.response_data, self.response_log)
 
     def log_response(self, method, url, count, response):
         current_date_and_time = datetime.now()
@@ -63,17 +62,16 @@ class APIRunner:
 
         color = self.get_color(response.status_code)
         logging.info(
-            f"{Fore.LIGHTBLACK_EX} {count} {current_date_and_time} "
-            + f"{Fore.RESET} Executed {method} {url} "
-            + color
-            + f": {response.status_code}"
-            + Style.RESET_ALL
-            + f" content {result_content} {result_length}"
+            f"{Fore.LIGHTBLACK_EX} {count} {current_date_and_time} {Fore.RESET} Executed {method} {url} : {color}"
+            + f"{response.status_code}{Style.RESET_ALL} content {result_content} {result_length}"
         )
 
         if self.args.response_stored and "json" in response.headers["content-type"]:
             logging.info(f"{response.json()}")
-            self.response_data.extend(response.json())
+            log_data = ResponseLog(response)
+            self.response_log.append(log_data.to_json())
+
+    #            self.response_data.extend(response_log)
 
     @staticmethod
     def show_progress(count: int, total: int):
@@ -114,42 +112,3 @@ def find_placeholders(url: str):
         exit(1)
 
     return placeholders
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        epilog="To avoid make request, use --dry for dry run or don't specify -u URL"
-    )
-
-    parser.add_argument("--file", "-f", type=str, required=True)
-    parser.add_argument("--clean", "-c", action="store_true", required=False)
-    parser.add_argument(
-        "--source",
-        "-s",
-        type=str,
-        required=False,
-        default="json",
-        choices=["json", "csv"],
-    )
-
-    parser.add_argument("--dry", action="store_true", required=False)
-    url_group = parser.add_argument_group()
-    url_group.add_argument("--method", "-m", type=str, required=False, default="GET")
-    url_group.add_argument(
-        "--response-stored", "-r", action="store_true", required=False
-    )
-    url_group.add_argument("--url", "-u", type=str, required=False)
-    url_group.add_argument("--token", "-t", type=str, required=False)
-    url_group.add_argument("--delay", "-d", type=float, required=False, default=0)
-
-    args = parser.parse_args()
-
-    # Execute args validations
-    if args.clean is True and args.source == "csv":
-        logging.error(
-            f"Invalid arguments provided, {Fore.RED}-c --clean{Fore.RESET} and {Fore.RED}-s --source csv{Fore.RESET}."
-        )
-        logging.warn("Can not clean csv duplicates")
-        exit(1)
-
-    return args
