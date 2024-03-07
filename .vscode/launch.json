@@ -8,7 +8,11 @@
       "program": "${workspaceFolder}/src/main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-c", "-f", "${workspaceFolder}/data/single_replace_dict.json"]
+      "args": [
+        "--clean",
+        "-f",
+        "${workspaceFolder}/data/single_replace_dict.json"
+      ]
     },
     {
       "name": "ApiBot JSON single replace list",
@@ -17,7 +21,11 @@
       "program": "${workspaceFolder}/src/main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-c", "-f", "${workspaceFolder}/data/single_replace_lists.json"]
+      "args": [
+        "--clean",
+        "-f",
+        "${workspaceFolder}/data/single_replace_lists.json"
+      ]
     },
     {
       "name": "ApiBot CSV + dry",
@@ -35,7 +43,7 @@
       ]
     },
     {
-      "name": "ApiBot CSV + call",
+      "name": "ApiBot CSV single call",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -45,13 +53,13 @@
         "-f",
         "${workspaceFolder}/data/single_replace.csv",
         "-u",
-        "https://google.com/{{replace_1}}",
+        "https://jsonplaceholder.typicode.com/posts/{{post_num}}",
         "-s",
         "csv"
       ]
     },
     {
-      "name": "ApiBot CSV multiple + call",
+      "name": "ApiBot CSV multiple call",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -68,49 +76,42 @@
       ]
     },
     {
-      "name": "ApiBot JSON single replace + call",
+      "name": "ApiBot JSON single call",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
       "args": [
-        "-c",
+        "--clean",
         "-f",
         "${workspaceFolder}/data/single_replace_lists.json",
         "-u",
-        "https://google.com/{{0}}"
+        "https://jsonplaceholder.typicode.com/posts/{{0}}",
+        "-r"
       ]
     },
     {
-      "name": "ApiBot JSON multiple replace + call",
+      "name": "ApiBot JSON multiple call",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
       "args": [
-        "-c",
+        "--clean",
         "-f",
         "${workspaceFolder}/data/multiple_replace.json",
         "-m",
-        "GET",
+        "POST",
         "-u",
-        "https://google.com/{{id}}/{{name}}/{{map_id}}/{{map}}",
+        "https://jsonplaceholder.typicode.com/posts/1?name={{name}}&map_id={{map_id}}&map={{map}}",
         "-t",
         "123456",
         "-d",
-        "2.5"
+        "2.5",
+        "-r"
       ]
-    },
-    {
-      "name": "run all test",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${file}",
-      "console": "integratedTerminal",
-      "justMyCode": true,
-      "args": ["-f", "${workspaceFolder}/data/example_input.json"]
     }
   ]
 }

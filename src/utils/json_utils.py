@@ -1,3 +1,4 @@
+import datetime
 import json
 
 
@@ -9,9 +10,12 @@ def parse(filename: str):
         return data
 
 
-def store(filename: str, data):
-    with open(filename, "w") as jsonfile:
-        json.dump(data, jsonfile)
+def store(filename: str, data, writeMethod: str = "a"):
+    if writeMethod != "w":
+        writeMethod = "a"
+
+    with open(filename, writeMethod) as jsonfile:
+        json.dump(data, jsonfile, cls=DateTimeEncoder)
         print(f"Write successful {filename}")
         jsonfile.close()
 
@@ -26,3 +30,11 @@ def cleanup(filename):
         else [val for array in json_data for val in array]
     )
     return set(all_arrays)
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return obj.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            return super().default(obj)
