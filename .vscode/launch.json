@@ -71,7 +71,22 @@
         "-f",
         "${workspaceFolder}/data/single_replace_lists.json",
         "-u",
-        "https://jsonplaceholder.typicode.com/posts/{{0}}"
+        "https://jsonplaceholder.typicode.com/posts/{{replace_1}}"
+      ]
+    },
+    {
+      "name": "ApiBot JSON single dict call",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "--clean",
+        "-f",
+        "${workspaceFolder}/data/single_replace_dict.json",
+        "-u",
+        "https://jsonplaceholder.typicode.com/posts/{{replace_1}}"
       ]
     },
     {

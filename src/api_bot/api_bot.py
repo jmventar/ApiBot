@@ -17,16 +17,13 @@ class ApiBot:
         self.response_data = []
         self.response_log = []
 
-    def replace_elements(self, value):
-        current_url = self.args.url
+    def replace_elements(self, value: str):
+        url = self.args.url
 
-        if (self.args.source != "csv") and (len(self.placeholders) == 1):
-            current_url = current_url.replace("0", str(value))
-        else:
-            for p in self.placeholders:
-                current_url = current_url.replace(f"{p}", value[p])
+        for p in self.placeholders:
+            url = url.replace(f"{p}", value)
 
-        return current_url.replace(r"{{", "").replace(r"}}", "")
+        return url.replace(r"{{", "").replace(r"}}", "")
 
     def run(self):
         if self.args.dry or self.args.url is None or self.placeholders is None:
@@ -39,8 +36,8 @@ class ApiBot:
             with requests.Session() as session:
                 session.headers.update({"Authorization": f"Bearer {self.args.token}"})
 
-                for count, elem in enumerate(self.elements, start=1):
-                    current_url = self.replace_elements(elem)
+                for count, elem in enumerate(self.elements):
+                    current_url = self.replace_elements(elem.get())
                     response = self.execute(method, current_url, session.headers, None)
 
                     if response is not None:

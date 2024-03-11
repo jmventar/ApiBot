@@ -24,7 +24,9 @@ def clean_duplicates(json_data):
         if isinstance(json_data[0], dict)
         else [val for array in json_data for val in array]
     )
-    return set(all_arrays)
+
+    clean_data = set(all_arrays)
+    return json.dumps(list(clean_data))
 
 
 class DateTimeEncoder(json.JSONEncoder):
