@@ -1,5 +1,4 @@
 import logging
-import re
 import time
 from datetime import datetime
 
@@ -30,7 +29,7 @@ class ApiBot:
         return current_url.replace(r"{{", "").replace(r"}}", "")
 
     def run(self):
-        if self.args.dry or self.args.url is None:
+        if self.args.dry or self.args.url is None or self.placeholders is None:
             logging.info(f"{Fore.YELLOW} dry-run, skip requests")
             exit(0)
         else:
@@ -97,18 +96,3 @@ class ApiBot:
             return Fore.YELLOW
         else:
             return Fore.RED
-
-
-def find_placeholders(url: str):
-    if url is None:
-        return ["0"]
-
-    placeholders = re.findall(r"{{(.*?)}}", url)
-
-    placeholder_length = len(placeholders)
-
-    if placeholder_length < 1:
-        logging.error(f"No elements to replace on URL ({url})")
-        exit(1)
-
-    return placeholders

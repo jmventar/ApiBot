@@ -1,7 +1,9 @@
 import argparse
 import datetime
 import logging
+import re
 
+from api_bot.api_bot import ApiBot
 from colorama import Fore, init
 from utils.json_utils import store
 
@@ -33,7 +35,7 @@ def parse_args():
     args = parser.parse_args()
 
     # Execute args validations
-    if args.clean is True and args.source == "csv":
+    if args.clean and args.source == "csv":
         logging.error(
             f"Invalid arguments provided, {Fore.RED}-c --clean{Fore.RESET} and {Fore.RED}-s --source csv{Fore.RESET}."
         )
@@ -43,9 +45,22 @@ def parse_args():
     return args
 
 
-def main_api_bot():
-    from api_bot.api_bot import ApiBot, find_placeholders
+def find_placeholders(url: str):
+    if url is None:
+        return None
 
+    placeholders = re.findall(r"{{(.*?)}}", url)
+
+    placeholder_length = len(placeholders)
+
+    if placeholder_length < 1:
+        logging.error(f"No elements to replace on URL ({url})")
+        exit(1)
+
+    return placeholders
+
+
+def main_api_bot():
     args = parse_args()
 
     # Initialize colorama and logging
@@ -59,13 +74,12 @@ def main_api_bot():
 
         elements = parse(args.file)
     else:
-        from utils.json_utils import cleanup, parse
+        from utils.json_utils import parse, clean_duplicates
 
-        # Only cleans simple lists / dicts
-        if args.clean is True and len(placeholders) == 1:
-            elements = cleanup(args.file)
-        else:
-            elements = parse(args.file)
+        elements = parse(args.file)
+
+        if args.clean:
+            elements = clean_duplicates(elements)
 
     runner = ApiBot(args, elements, placeholders)
     logging.info(f"Given {Fore.YELLOW}{len(runner.elements)}{Fore.RESET} elements:")

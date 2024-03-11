@@ -18,9 +18,7 @@ def store(filename: str, data):
 
 
 # TODO this is a crap, specific method also on replace for single elements != all CSV + multiple JSON
-def cleanup(filename):
-    json_data = parse(filename)
-
+def clean_duplicates(json_data):
     all_arrays = (
         [v for item in json_data for k, v in item.items()]
         if isinstance(json_data[0], dict)
