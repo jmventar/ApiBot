@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import logging
+import pathlib
 
 from colorama import Fore, init
 from utils.json_utils import store
@@ -71,9 +72,20 @@ def main_api_bot():
     logging.info(f"Given {Fore.YELLOW}{len(runner.elements)}{Fore.RESET} elements:")
     logging.info(f"{runner.elements}")
     (result, log_data) = runner.run()
-    if not args.avoid_storage:
-        store(f"data/log_{datetime.date.today()}.json", log_data)
-        store(f"data/result_{datetime.date.today()}.json", result)
+
+    data_folder = f"{pathlib.Path().resolve()}/data"
+
+    # check if results not empty and avoid storage flag
+    if log_data and not args.avoid_storage:
+        store(f"{data_folder}/log_{datetime.date.today()}.json", log_data)
+
+    # check if log_data not empty and avoid storage flag
+    if result and not args.avoid_storage:
+        store(
+            f"{data_folder}/result_{datetime.date.today()}.json",
+            result,
+        )
+
     exit(0)
 
 

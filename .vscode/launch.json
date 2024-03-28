@@ -11,7 +11,7 @@
       "args": [
         "--clean",
         "-f",
-        "${workspaceFolder}/data/single_replace_dict.json"
+        "${workspaceFolder}/test/data/single_replace_dict.json"
       ]
     },
     {
@@ -24,7 +24,7 @@
       "args": [
         "--clean",
         "-f",
-        "${workspaceFolder}/data/single_replace_lists.json"
+        "${workspaceFolder}/test/data/single_replace_lists.json"
       ]
     },
     {
@@ -36,7 +36,7 @@
       "justMyCode": true,
       "args": [
         "-f",
-        "${workspaceFolder}/data/single_replace.csv",
+        "${workspaceFolder}/test/data/single_replace.csv",
         "-u",
         "https://jsonplaceholder.typicode.com/posts/{{post_num}}",
         "-s",
@@ -52,7 +52,7 @@
       "justMyCode": true,
       "args": [
         "-f",
-        "${workspaceFolder}/data/multiple_replace.csv",
+        "${workspaceFolder}/test/data/multiple_replace.csv",
         "-u",
         "https://google.com/{{replace_1}}/{{replace_2}}/{{replace_3}}",
         "-s",
@@ -69,7 +69,7 @@
       "args": [
         "--clean",
         "-f",
-        "${workspaceFolder}/data/single_replace_lists.json",
+        "${workspaceFolder}/test/data/single_replace_lists.json",
         "-u",
         "https://jsonplaceholder.typicode.com/posts/{{0}}"
       ]
@@ -84,7 +84,7 @@
       "args": [
         "--clean",
         "-f",
-        "${workspaceFolder}/data/multiple_replace.json",
+        "${workspaceFolder}/test/data/multiple_replace.json",
         "-m",
         "POST",
         "-u",
