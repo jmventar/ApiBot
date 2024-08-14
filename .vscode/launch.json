@@ -15,7 +15,7 @@
       ]
     },
     {
-      "name": "ApiBot JSON single replace list",
+      "name": "ApiBot JSON single replace arrays",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -24,7 +24,7 @@
       "args": [
         "--clean",
         "-f",
-        "${workspaceFolder}/test/data/single_replace_lists.json"
+        "${workspaceFolder}/test/data/single_replace_arrays.json"
       ]
     },
     {
@@ -69,7 +69,7 @@
       "args": [
         "--clean",
         "-f",
-        "${workspaceFolder}/test/data/single_replace_lists.json",
+        "${workspaceFolder}/test/data/single_replace_arrays.json",
         "-u",
         "https://jsonplaceholder.typicode.com/posts/{{0}}"
       ]

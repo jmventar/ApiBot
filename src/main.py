@@ -62,7 +62,7 @@ def main_api_bot():
     else:
         from utils.json_utils import cleanup, parse
 
-        # Only cleans simple lists / dicts
+        # Only cleans simple arrays / dictionaries
         if args.clean is True and len(placeholders) == 1:
             elements = cleanup(args.file)
         else:

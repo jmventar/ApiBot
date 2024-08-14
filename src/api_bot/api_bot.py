@@ -63,8 +63,9 @@ class ApiBot:
 
         color = self.get_color(response.status_code)
         logging.info(
-            f"{Fore.LIGHTBLACK_EX} {count} {current_date_and_time} {Fore.RESET} Executed {method} {url} : {color}"
-            + f"{response.status_code}{Style.RESET_ALL} content {result_content} {result_length}"
+            f"{Fore.LIGHTBLACK_EX} {count} {current_date_and_time} {Fore.RESET} "
+            f"Executed {method} {url} : {color} {response.status_code}{Style.RESET_ALL} "
+            f"content {result_content} {result_length}"
         )
 
         content_type = response.headers.get("content-type")
