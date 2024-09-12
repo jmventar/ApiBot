@@ -72,8 +72,9 @@ class ApiBot:
         if content_type is not None and "json" in content_type:
             logging.info(f"{response.json()}")
             self.response_data.extend(response.json())
-            log_data = ResponseLog(response)
-            self.response_log.append(log_data.to_json())
+
+        log_data = ResponseLog(response)
+        self.response_log.append(log_data.to_json())
 
     @staticmethod
     def show_progress(count: int, total: int):
