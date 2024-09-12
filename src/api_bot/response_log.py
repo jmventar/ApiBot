@@ -14,6 +14,8 @@ class ResponseLog:
             "status": self.response.status_code,
             "content-type": self.response.headers.get("content-type"),
             "content-length": self.response.headers.get("content-length"),
-            "data": self.response.json(),
+            "data": self.response.json()
+            if len(self.response.content) > 0 and self.response.content is not None
+            else None,
         }
         return data
