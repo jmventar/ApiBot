@@ -8,6 +8,7 @@ from colorama import Fore, Style
 from requests.exceptions import RequestException
 
 from api_bot.response_log import ResponseLog
+from constants import JSON_ARRAY_SOURCE
 
 
 class ApiBot:
@@ -19,15 +20,17 @@ class ApiBot:
         self.response_log = []
 
     def replace_elements(self, value):
-        current_url = self.args.url
+        current_url = self.args.url.replace(r"{{", "#").replace(r"}}", "#")
 
-        if (self.args.source != "csv") and (len(self.placeholders) == 1):
-            current_url = current_url.replace("0", str(value))
+        if self.args.source == JSON_ARRAY_SOURCE:
+            current_url = current_url.replace("#0#", str(value))
+        elif self.args.clean is True:
+            current_url = current_url.replace(f"#{self.placeholders[0]}#", str(value))
         else:
             for p in self.placeholders:
-                current_url = current_url.replace(f"{p}", value[p])
+                current_url = current_url.replace(f"#{p}#", str(value[p]))
 
-        return current_url.replace(r"{{", "").replace(r"}}", "")
+        return current_url
 
     def run(self):
         if self.args.dry or self.args.url is None:
@@ -61,11 +64,13 @@ class ApiBot:
         result_content = response.headers.get("content-type")
         result_length = response.headers.get("content-length")
 
-        color = self.get_color(response.status_code)
+        status_color = self.get_status_color(response.status_code)
+        method_color = self.get_method_color(method)
         logging.info(
             f"{Fore.LIGHTBLACK_EX} {count} {current_date_and_time} {Fore.RESET} "
-            f"Executed {method} {url} : {color} {response.status_code}{Style.RESET_ALL} "
-            f"content {result_content} {result_length}"
+            f"{method_color}{method}{Style.RESET_ALL} {url} : "
+            f"{status_color}{response.status_code}{Style.RESET_ALL} "
+            f"content {result_content} {result_length} "
         )
 
         content_type = response.headers.get("content-type")
@@ -93,7 +98,7 @@ class ApiBot:
             return None
 
     @staticmethod
-    def get_color(status_code):
+    def get_status_color(status_code):
         if 200 <= status_code < 300:
             return Fore.GREEN
         elif 300 <= status_code < 400:
@@ -101,13 +106,26 @@ class ApiBot:
         else:
             return Fore.RED
 
+    @staticmethod
+    def get_method_color(method):
+        match method:
+            case "GET":
+                return Fore.LIGHTGREEN_EX
+            case "PATCH":
+                return Fore.LIGHTMAGENTA_EX
+            case "POST":
+                return Fore.LIGHTYELLOW_EX
+            case "PUT":
+                return Fore.LIGHTBLUE_EX
+            case "DELETE":
+                return Fore.LIGHTRED_EX
 
-def find_placeholders(url: str):
-    if url is None:
+
+def find_placeholders(url: str, jsonArray: bool = False):
+    if jsonArray or url is None:
         return ["0"]
 
     placeholders = re.findall(r"{{(.*?)}}", url)
-
     placeholder_length = len(placeholders)
 
     if placeholder_length < 1:

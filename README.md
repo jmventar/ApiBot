@@ -6,7 +6,7 @@ Simple project to run a collection of requests, similar to POSTMAN run collectio
 
 Check `.vscode\launch.json` for test runs using **Visual Studio Code**
 
-**-f** parameter is mandatory, with an input file (json as default or csv).
+`-f` parameter is mandatory, with an input file (json object as default, also accepts json arrays and csv).
 
 `usage: main.py [-h] --file FILE [--clean] [--source {json,csv}] [--dry] [--method METHOD] [--response-stored] [--url URL] [--token TOKEN] [--delay DELAY]`
 
@@ -16,7 +16,7 @@ Check `.vscode\launch.json` for test runs using **Visual Studio Code**
 - `--file FILE, -f FILE` source data file, **mandatory**
 - `--url URL, -u URL` url to make the requests
 - `--clean` check json array cleaner section
-- `--source {json,csv}, -s {json,csv}` json is default format for input, default **json**
+- `--source {json, json_array, csv}, -s {json, json_array, csv}` json is default format for input, default **json**
 - `--dry` dry run, run without executing requests
 - `--method METHOD, -m METHOD` request method, default **GET**
 - `--avoid-storage` don't create `data\result\_{current_date}.json` results file and `data\log\_{current_date}.json` log file. **false by default.**
