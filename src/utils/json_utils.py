@@ -1,6 +1,8 @@
 import datetime
 import json
 
+from colorama import Fore
+
 
 def parse(filename: str):
     with open(filename) as jsonfile:
@@ -13,7 +15,7 @@ def parse(filename: str):
 def store(filename: str, data):
     with open(filename, "w") as jsonfile:
         json.dump(data, jsonfile, cls=DateTimeEncoder)
-        print(f"Write successful {filename}")
+        print(f"Write successful {Fore.LIGHTCYAN_EX}{filename}{Fore.RESET}")
         jsonfile.close()
 
 
@@ -26,6 +28,7 @@ def cleanup(filename):
         if isinstance(json_data[0], dict)
         else [val for array in json_data for val in array]
     )
+
     return set(all_arrays)
 
 

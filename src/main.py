@@ -2,8 +2,8 @@ import argparse
 import datetime
 import logging
 import pathlib
-
 from colorama import Fore, init
+from constants import CSV_SOURCE, JSON_ARRAY_SOURCE, JSON_SOURCE
 from utils.json_utils import store
 
 
@@ -19,8 +19,8 @@ def parse_args():
         "-s",
         type=str,
         required=False,
-        default="json",
-        choices=["json", "csv"],
+        default=JSON_SOURCE,
+        choices=[JSON_SOURCE, CSV_SOURCE, JSON_ARRAY_SOURCE],
     )
     parser.add_argument("--dry", action="store_true", required=False)
 
@@ -34,11 +34,11 @@ def parse_args():
     args = parser.parse_args()
 
     # Execute args validations
-    if args.clean is True and args.source == "csv":
+    if args.clean is True and args.source == CSV_SOURCE:
         logging.error(
-            f"Invalid arguments provided, {Fore.RED}-c --clean{Fore.RESET} and {Fore.RED}-s --source csv{Fore.RESET}."
+            f"Invalid arguments provided, {Fore.RED}-c --clean{Fore.RESET} and {Fore.RED}-s --source {CSV_SOURCE}{Fore.RESET}."
         )
-        logging.warn("Can not clean csv duplicates")
+        logging.warning(f"Can not clean {CSV_SOURCE} duplicates")
         exit(1)
 
     return args
@@ -53,9 +53,9 @@ def main_api_bot():
     init()
     logging.basicConfig(level=logging.INFO)
 
-    placeholders = find_placeholders(args.url)
+    placeholders = find_placeholders(args.url, args.source == JSON_ARRAY_SOURCE)
 
-    if args.source == "csv":
+    if args.source == CSV_SOURCE:
         from utils.csv_utils import parse
 
         elements = parse(args.file)
@@ -73,16 +73,24 @@ def main_api_bot():
     logging.info(f"{runner.elements}")
     (result, log_data) = runner.run()
 
-    data_folder = f"{pathlib.Path().resolve()}/data"
+    # check pathfolder exists
+    data_folder_path = f"{pathlib.Path().resolve()}/data"
+    data_folder = pathlib.Path(data_folder_path)
+
+    if not data_folder.exists():
+        data_folder.mkdir(parents=True, exist_ok=True)
+        print(
+            f"Created data directory: {Fore.LIGHTBLACK_EX}{data_folder_path}{Fore.RESET}"
+        )
 
     # check if results not empty and avoid storage flag
     if log_data and not args.avoid_storage:
-        store(f"{data_folder}/log_{datetime.date.today()}.json", log_data)
+        store(f"{data_folder_path}/log_{datetime.date.today()}.json", log_data)
 
     # check if log_data not empty and avoid storage flag
     if result and not args.avoid_storage:
         store(
-            f"{data_folder}/result_{datetime.date.today()}.json",
+            f"{data_folder_path}/result_{datetime.date.today()}.json",
             result,
         )
 
