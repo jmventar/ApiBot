@@ -105,7 +105,6 @@
       "console": "integratedTerminal",
       "justMyCode": true,
       "args": [
-        // "--clean",
         "-f",
         "${workspaceFolder}/test/data/multiple_replace.json",
         "-m",

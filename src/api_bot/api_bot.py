@@ -4,7 +4,6 @@ import time
 from datetime import datetime
 
 import requests
-import urllib.parse
 from colorama import Fore, Style
 from requests.exceptions import RequestException
 
