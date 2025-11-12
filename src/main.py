@@ -41,14 +41,14 @@ def validate_args(args, placeholders):
         logging.error(
             f"Invalid arguments provided, {Fore.RED}-c --clean{Fore.RESET} and {Fore.RED}-s --source {CSV_SOURCE}{Fore.RESET}."
         )
-        logging.warning(f"Can not clean {args.source} duplicates")
+        logging.warning(f"Cannot clean {args.source} duplicates")
         exit(1)
 
     if args.clean is True and len(placeholders) > 1:
         logging.error(
             f"Invalid arguments provided, {Fore.RED}-c --clean{Fore.RESET} and multiple placeholders found."
         )
-        logging.warning(f"Can not clean {args.source} duplicates")
+        logging.warning(f"Cannot clean {args.source} duplicates")
         exit(1)
 
     if args.url is None:
