@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "dry run JSON single replace",
+      "name": "dry run JSON single",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -15,7 +15,7 @@
       ]
     },
     {
-      "name": "dry run JSON_ARRAY single replace",
+      "name": "dry run JSON_ARRAY single",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -24,11 +24,11 @@
       "args": [
         "--clean",
         "-f",
-        "${workspaceFolder}/test/data/single_replace_json_array.json"
+        "${workspaceFolder}/test/data/json_arrays.json"
       ]
     },
     {
-      "name": "CSV single call",
+      "name": "CSV single",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "name": "CSV multiple call",
+      "name": "CSV multiple",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -54,13 +54,13 @@
         "-f",
         "${workspaceFolder}/test/data/multiple_replace.csv",
         "-u",
-        "https://jsonplaceholder.typicode.com/posts/1?a={{replace_1}}&b={{replace_2}}&c={{replace_3}}",
+        "https://jsonplaceholder.typicode.com/posts/1?param1={{replace_1}}&param2={{replace_2}}&param3={{replace_3}}",
         "-s",
         "csv"
       ]
     },
     {
-      "name": "JSON_ARRAY single call",
+      "name": "JSON_ARRAY",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.py",
@@ -71,7 +71,7 @@
         "json_array",
         "--clean",
         "-f",
-        "${workspaceFolder}/test/data/single_replace_json_array.json",
+        "${workspaceFolder}/test/data/json_arrays.json",
         "-u",
         "https://jsonplaceholder.typicode.com/posts/{{0}}"
       ]
@@ -111,7 +111,7 @@
         "-m",
         "POST",
         "-u",
-        "https://jsonplaceholder.typicode.com/posts/{{name}}&map_id={{map_id}}&map={{map}}",
+        "https://jsonplaceholder.typicode.com/posts/1?param1={{id}}&param2={{name}}&param3={{map_id}}&param4={{map}}",
         "-t",
         "123456",
         "-d",

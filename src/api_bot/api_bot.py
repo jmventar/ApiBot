@@ -4,11 +4,12 @@ import time
 from datetime import datetime
 
 import requests
+import urllib.parse
 from colorama import Fore, Style
 from requests.exceptions import RequestException
 
 from api_bot.response_log import ResponseLog
-from constants import CSV_SOURCE
+from constants import JSON_ARRAY_SOURCE
 
 
 class ApiBot:
@@ -20,17 +21,15 @@ class ApiBot:
         self.response_log = []
 
     def replace_elements(self, value):
-        current_url = self.args.url
+        current_url = self.args.url.replace(r"{{", "#").replace(r"}}", "#")
 
-        # replace the placeholders
-        current_url = current_url.replace(r"{{", "#").replace(r"}}", "#")
-
-        # TODO new format, check compatibility
-        if self.args.source != CSV_SOURCE and (len(self.placeholders) == 1):
+        if self.args.source == JSON_ARRAY_SOURCE:
             current_url = current_url.replace("#0#", str(value))
+        elif self.args.clean is True:
+            current_url = current_url.replace(f"#{self.placeholders[0]}#", str(value))
         else:
             for p in self.placeholders:
-                current_url = current_url.replace(f"#{p}#", value[p])
+                current_url = current_url.replace(f"#{p}#", str(value[p]))
 
         return current_url
 
@@ -70,8 +69,9 @@ class ApiBot:
         method_color = self.get_method_color(method)
         logging.info(
             f"{Fore.LIGHTBLACK_EX} {count} {current_date_and_time} {Fore.RESET} "
-            f"Executed {method_color}{method}{Style.RESET_ALL} {url} : {status_color} {response.status_code}{Style.RESET_ALL}"
-            f"content {result_content} {result_length}"
+            f"{method_color}{method}{Style.RESET_ALL} {url} : "
+            f"{status_color}{response.status_code}{Style.RESET_ALL} "
+            f"content {result_content} {result_length} "
         )
 
         content_type = response.headers.get("content-type")
@@ -123,13 +123,10 @@ class ApiBot:
 
 
 def find_placeholders(url: str, jsonArray: bool = False):
-    if jsonArray:
+    if jsonArray or url is None:
         return ["0"]
-    if url is None:
-        return []
 
     placeholders = re.findall(r"{{(.*?)}}", url)
-
     placeholder_length = len(placeholders)
 
     if placeholder_length < 1:
