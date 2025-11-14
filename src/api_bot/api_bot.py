@@ -8,7 +8,7 @@ from colorama import Fore, Style
 from requests.exceptions import RequestException
 
 from api_bot.response_log import ResponseLog
-from constants import JSON_ARRAY_SOURCE
+from constants import CONTENT_TYPE_JSON, JSON_ARRAY_SOURCE
 
 
 class ApiBot:
@@ -64,6 +64,9 @@ class ApiBot:
         result_content = response.headers.get("content-type")
         result_length = response.headers.get("content-length")
 
+        if result_length is None:
+            result_length = len(response.content) if response.content is not None else 0
+
         status_color = self.get_status_color(response.status_code)
         method_color = self.get_method_color(method)
         logging.info(
@@ -73,12 +76,13 @@ class ApiBot:
             f"content {result_content} {result_length} "
         )
 
-        content_type = response.headers.get("content-type")
-        if content_type is not None and "json" in content_type:
+        is_json_response: bool = False
+        if result_content is not None and CONTENT_TYPE_JSON in result_content:
             logging.info(f"{response.json()}")
             self.response_data.extend(response.json())
+            is_json_response = True
 
-        log_data = ResponseLog(response)
+        log_data = ResponseLog(response, result_length, is_json_response)
         self.response_log.append(log_data.to_json())
 
     @staticmethod
