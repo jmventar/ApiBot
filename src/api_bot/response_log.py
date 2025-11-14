@@ -2,8 +2,10 @@ import datetime
 
 
 class ResponseLog:
-    def __init__(self, response):
+    def __init__(self, response, content_length: int, is_json_response: bool):
         self.response = response
+        self.content_length = content_length
+        self.is_json_response = is_json_response
         self.datetime = datetime.datetime.now()
 
     def to_json(self):
@@ -13,9 +15,13 @@ class ResponseLog:
             "url": self.response.url,
             "status": self.response.status_code,
             "content-type": self.response.headers.get("content-type"),
-            "content-length": self.response.headers.get("content-length"),
-            "data": self.response.json()
-            if len(self.response.content) > 0 and self.response.content is not None
-            else None,
+            "content-length": self.content_length,
         }
+
+        if self.content_length > 0:
+            if self.is_json_response:
+                data["data"] = self.response.json()
+            else:
+                data["data"] = self.response.text
+
         return data
