@@ -66,6 +66,8 @@ class ApiBot:
 
         if result_length is None:
             result_length = len(response.content) if response.content is not None else 0
+        else:
+            result_length = int(result_length)
 
         status_color = self.get_status_color(response.status_code)
         method_color = self.get_method_color(method)

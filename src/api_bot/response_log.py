@@ -22,6 +22,6 @@ class ResponseLog:
             if self.is_json_response:
                 data["data"] = self.response.json()
             else:
-                data["data"] = self.response.text()
+                data["data"] = self.response.text
 
         return data
