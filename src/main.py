@@ -1,9 +1,9 @@
 import argparse
-import datetime
+from datetime import datetime
 import logging
 import pathlib
 from colorama import Fore, init
-from constants import CSV_SOURCE, JSON_ARRAY_SOURCE, JSON_SOURCE
+from constants import CSV_SOURCE, DATETIME_FORMAT, JSON_ARRAY_SOURCE, JSON_SOURCE
 from utils.json_utils import store
 
 
@@ -100,12 +100,15 @@ def main_api_bot():
 
     # check if results not empty and avoid storage flag
     if log_data and not args.avoid_storage:
-        store(f"{data_folder_path}/log_{datetime.date.today()}.json", log_data)
+        store(
+            f"{data_folder_path}/log_{datetime.now().strftime(DATETIME_FORMAT)}_source-{args.source}.json",
+            log_data,
+        )
 
     # check if log_data not empty and avoid storage flag
     if result and not args.avoid_storage:
         store(
-            f"{data_folder_path}/result_{datetime.date.today()}.json",
+            f"{data_folder_path}/result_{datetime.now().strftime(DATETIME_FORMAT)}_source-{args.source}.json",
             result,
         )
 
