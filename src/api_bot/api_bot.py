@@ -33,6 +33,10 @@ class ApiBot:
         return current_url
 
     def run(self):
+        successful_requests = 0
+        # TODO create a dictionary by status code
+        failed_requests = 0
+
         if self.args.dry or self.args.url is None:
             logging.info(f"{Fore.YELLOW} dry-run, skip requests")
             exit(0)
@@ -49,6 +53,10 @@ class ApiBot:
 
                     if response is not None:
                         self.log_response(method, current_url, count, response)
+                        if response.status_code == 200:
+                            successful_requests += 1
+                        else:
+                            failed_requests += 1
 
                     if count % 50 == 0:
                         self.show_progress(count, len(self.elements))
@@ -56,6 +64,11 @@ class ApiBot:
                     if delay > 0:
                         time.sleep(delay)
 
+            logging.info(
+                f"Executed all requests {count}: "
+                f" Successful requests: {self.get_status_color(200)}{successful_requests} {Fore.RESET}"
+                f" Failed requests: {self.get_status_color(400)}{failed_requests} {Fore.RESET}"
+            )
             # Return log
             return (self.response_data, self.response_log)
 
