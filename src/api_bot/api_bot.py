@@ -68,11 +68,12 @@ class ApiBot:
 
             total = len(self.elements)
             failures_summary = self._format_failures_summary()
+            logging.info(f"Executed all requests ({Fore.YELLOW}{total}{Fore.RESET})")
             logging.info(
-                f"Executed all requests {total}: "
-                f" Successful: {self.get_status_color(200)}{self._successful_requests}{Fore.RESET}"
+                f" Success: {self.get_status_color(200)}{self._successful_requests}{Fore.RESET}"
                 f"{failures_summary}"
             )
+
             # Return log
             return (self.response_data, self.response_log)
 
