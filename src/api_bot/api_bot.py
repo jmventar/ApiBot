@@ -18,6 +18,8 @@ class ApiBot:
         self.placeholders = placeholders
         self.response_data = []
         self.response_log = []
+        self._successful_requests = 0
+        self._failed_by_status = {}
 
     def replace_elements(self, value):
         current_url = self.args.url.replace(r"{{", "#").replace(r"}}", "#")
@@ -33,6 +35,10 @@ class ApiBot:
         return current_url
 
     def run(self):
+        # reset counters per run
+        self._successful_requests = 0
+        self._failed_by_status = {}
+
         if self.args.dry or self.args.url is None:
             logging.info(f"{Fore.YELLOW} dry-run, skip requests")
             exit(0)
@@ -49,6 +55,10 @@ class ApiBot:
 
                     if response is not None:
                         self.log_response(method, current_url, count, response)
+                        if 200 <= response.status_code < 300:
+                            self.register_success()
+                        else:
+                            self.register_failure(response.status_code)
 
                     if count % 50 == 0:
                         self.show_progress(count, len(self.elements))
@@ -56,8 +66,35 @@ class ApiBot:
                     if delay > 0:
                         time.sleep(delay)
 
+            total = len(self.elements)
+            failures_summary = self._format_failures_summary()
+            logging.info(f"Executed all requests {Fore.YELLOW}{total}{Fore.RESET}")
+            logging.info(
+                f"Success: {self.get_status_color(200)}{self._successful_requests}{Fore.RESET}"
+                f"{failures_summary}"
+            )
+
             # Return log
             return (self.response_data, self.response_log)
+
+    def register_success(self):
+        self._successful_requests += 1
+
+    def register_failure(self, status_code: int):
+        self._failed_by_status[status_code] = (
+            self._failed_by_status.get(status_code, 0) + 1
+        )
+
+    def _format_failures_summary(self) -> str:
+        if not self._failed_by_status:
+            return ""
+        # Sort by status code for consistent output
+        parts = []
+        for code in sorted(self._failed_by_status.keys()):
+            count = self._failed_by_status[code]
+            color = self.get_status_color(code)
+            parts.append(f" {color}{code}:{count}{Fore.RESET}")
+        return " | Failures:" + "".join(parts)
 
     def log_response(self, method, url, count, response):
         current_date_and_time = datetime.now()
