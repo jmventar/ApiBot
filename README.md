@@ -4,7 +4,7 @@ Simple project to run a collection of requests, similar to POSTMAN run collectio
 
 ### Usage
 
-Check `.vscode\launch.json` for test runs using **Visual Studio Code**
+Check `.vscode/launch.json` for test runs using **Visual Studio Code**
 
 `-f` parameter is mandatory, with an input file (json object as default, also accepts json arrays and csv).
 
@@ -19,7 +19,7 @@ Check `.vscode\launch.json` for test runs using **Visual Studio Code**
 - `--source {json, json_array, csv}, -s {json, json_array, csv}` json is default format for input, default **json**
 - `--dry` dry run, run without executing requests
 - `--method METHOD, -m METHOD` request method, default **GET**
-- `--avoid-storage` don't create `data\result\_{current_date}.json` results file and `data\log\_{current_date}.json` log file. **false by default.**
+- `--avoid-storage` don't create `data/result_{current_date}.json` results file and `data/log_{current_date}.json` log file. **false by default.**
 - `--token TOKEN, -t TOKEN` bearer token if needed
 - `--delay DELAY, -d DELAY` delay between requests in seconds, accepts deciaml values
 
@@ -37,7 +37,7 @@ Url replacer replaces specific parts of the url with provided file values.
 It will try to find json property and replace in the url.
 Same for CSV with headers.
 
-Special case is for json arrays, where a `{{0}}` needs to be specified in url. This specific case is used to clean duplicated values and converts the array into python set. Check `ApiBot JSON single replace arrays` and `ApiBot JSON single call` examples on `.vscode\launch.json`
+Special case is for json arrays, where a `{{0}}` needs to be specified in url. This specific case is used to clean duplicated values and converts the array into python set. Check `ApiBot JSON single replace arrays` and `ApiBot JSON single call` examples on `.vscode/launch.json`
 
 #### Sample requests
 
@@ -46,3 +46,11 @@ Sample launch GET requests
 `py ./src/main.py -clean -f ./data/single_replace.json -m GET -u https://jsonplaceholder.typicode.com/posts/{{post_num}} -t 123456 -d 2.5`
 
 `py ./src/main.py -f ./data/multiple_replace.csv -m GET -u https://jsonplaceholder.typicode.com/posts/{{id}}}/{{name}}/{{map_id}}/{{map}} -t 123456`
+
+#### Sample scripts
+
+Ready-to-use shell scripts for common operations are available in the `scripts/` directory. See `scripts/insurances_availability.sh` for an example of running batch POST requests.
+
+#### AI coding agents
+
+This repository includes an `AGENTS.md` file with project structure, conventions, and guidelines for AI coding assistants (Cursor, Copilot, etc.).
