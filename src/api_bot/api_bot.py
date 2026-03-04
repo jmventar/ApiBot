@@ -1,4 +1,5 @@
 import logging
+import json
 import re
 import time
 from datetime import datetime
@@ -39,6 +40,25 @@ class ApiBot:
 
         return current_url
 
+    def replace_payload_elements(self, value):
+        if not self.args.payload:
+            return None
+
+        payload_placeholders = re.findall(r"{{(.*?)}}", self.args.payload)
+        current_payload = self.args.payload.replace(r"{{", "#").replace(r"}}", "#")
+
+        if self.args.source == JSON_ARRAY_SOURCE:
+            current_payload = current_payload.replace("#0#", str(value))
+        elif self.args.clean is True and len(payload_placeholders) == 1:
+            current_payload = current_payload.replace(
+                f"#{payload_placeholders[0]}#", str(value)
+            )
+        else:
+            for p in payload_placeholders:
+                current_payload = current_payload.replace(f"#{p}#", str(value[p]))
+
+        return json.loads(current_payload)
+
     def _persist_to_storage(self):
         if self.args.avoid_storage:
             return
@@ -72,7 +92,8 @@ class ApiBot:
 
                 for count, elem in enumerate(self.elements, start=1):
                     current_url = self.replace_elements(elem)
-                    response = self.execute(method, current_url, session.headers, None)
+                    json_data = self.replace_payload_elements(elem)
+                    response = self.execute(method, current_url, session.headers, json_data)
 
                     if response is not None:
                         self.log_response(method, current_url, count, response)

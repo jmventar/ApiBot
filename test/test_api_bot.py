@@ -13,6 +13,7 @@ class MockArgs:
         self,
         url="http://example.com/{{0}}",
         source="json_array",
+        payload=None,
         dry=False,
         method="GET",
         delay=0,
@@ -22,6 +23,7 @@ class MockArgs:
     ):
         self.url = url
         self.source = source
+        self.payload = payload
         self.dry = dry
         self.method = method
         self.delay = delay
@@ -88,6 +90,56 @@ def test_replace_elements_csv_multiple_placeholders():
     bot = ApiBot(args, [], ["r1", "r2", "r3"])
     value = {"r1": "x", "r2": "y", "r3": "z"}
     assert bot.replace_elements(value) == "http://example.com/q?a=x&b=y&c=z"
+
+
+# ============================================================
+# replace_payload_elements
+# ============================================================
+
+def test_replace_payload_none():
+    args = MockArgs(payload=None, source="json")
+    bot = ApiBot(args, [], ["id"])
+    assert bot.replace_payload_elements({"id": 7}) is None
+
+
+def test_replace_payload_json_source():
+    args = MockArgs(
+        source="json",
+        payload='{"id": "{{id}}"}',
+    )
+    bot = ApiBot(args, [], ["id"])
+    payload = bot.replace_payload_elements({"id": 7})
+    assert payload == {"id": "7"}
+
+
+def test_replace_payload_csv_source():
+    args = MockArgs(
+        source="csv",
+        payload='{"replace_1": "{{replace_1}}", "replace_2": "{{replace_2}}"}',
+    )
+    bot = ApiBot(args, [], ["replace_1", "replace_2"])
+    payload = bot.replace_payload_elements({"replace_1": "foo", "replace_2": "bar"})
+    assert payload == {"replace_1": "foo", "replace_2": "bar"}
+
+
+def test_replace_payload_json_array():
+    args = MockArgs(
+        source="json_array",
+        payload='{"scheduleId": "{{0}}"}',
+    )
+    bot = ApiBot(args, [], ["0"])
+    payload = bot.replace_payload_elements(123)
+    assert payload == {"scheduleId": "123"}
+
+
+def test_replace_payload_multiple_placeholders():
+    args = MockArgs(
+        source="json",
+        payload='{"id": "{{id}}", "name": "{{name}}", "map": "{{map}}"}',
+    )
+    bot = ApiBot(args, [], ["id", "name", "map"])
+    payload = bot.replace_payload_elements({"id": 1, "name": "Downtown", "map": "CritCity"})
+    assert payload == {"id": "1", "name": "Downtown", "map": "CritCity"}
 
 
 # ============================================================
@@ -268,6 +320,43 @@ def test_persist_to_storage_avoid(tmp_path):
 # ============================================================
 # run (integration-level)
 # ============================================================
+
+
+def test_run_passes_payload_to_execute():
+    args = MockArgs(
+        source="json",
+        method="POST",
+        url="http://example.com/posts/{{id}}",
+        payload='{"id":"{{id}}","name":"{{name}}"}',
+    )
+    elements = [{"id": 1, "name": "one"}, {"id": 2, "name": "two"}]
+    bot = ApiBot(args, elements, ["id"])
+
+    with patch.object(ApiBot, "execute", return_value=MagicMock(status_code=200)) as mock_execute:
+        with patch.object(ApiBot, "log_response"):
+            with patch.object(bot, "_persist_to_storage"):
+                bot.run()
+
+    assert mock_execute.call_args_list[0].args[3] == {"id": "1", "name": "one"}
+    assert mock_execute.call_args_list[1].args[3] == {"id": "2", "name": "two"}
+
+
+def test_run_passes_none_when_no_payload():
+    args = MockArgs(
+        source="json",
+        method="POST",
+        url="http://example.com/posts/{{id}}",
+        payload=None,
+    )
+    elements = [{"id": 1}]
+    bot = ApiBot(args, elements, ["id"])
+
+    with patch.object(ApiBot, "execute", return_value=MagicMock(status_code=200)) as mock_execute:
+        with patch.object(ApiBot, "log_response"):
+            with patch.object(bot, "_persist_to_storage"):
+                bot.run()
+
+    assert mock_execute.call_args_list[0].args[3] is None
 
 @patch("src.api_bot.api_bot.requests.request")
 def test_run_calls_persist_periodically(mock_request, tmp_path):

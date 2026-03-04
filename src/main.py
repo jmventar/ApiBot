@@ -25,6 +25,7 @@ def parse_args():
 
     url_group = parser.add_argument_group()
     url_group.add_argument("--method", "-m", type=str, required=False, default="GET")
+    url_group.add_argument("--payload", "-p", type=str, required=False, default=None)
     url_group.add_argument("--url", "-u", type=str, required=False)
     url_group.add_argument("--token", "-t", type=str, required=False)
     url_group.add_argument("--delay", "-d", type=float, required=False, default=0)
