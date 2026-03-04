@@ -12,13 +12,6 @@ def parse(filename: str):
         return data
 
 
-def store(filename: str, data):
-    with open(filename, "w") as jsonfile:
-        json.dump(data, jsonfile, cls=DateTimeEncoder)
-        print(f"Write successful {Fore.LIGHTCYAN_EX}{filename}{Fore.RESET}")
-        jsonfile.close()
-
-
 def store_jsonl_append(filename: str, items: list):
     """Append items to a JSONL file (one JSON object per line)."""
     with open(filename, "a") as f:

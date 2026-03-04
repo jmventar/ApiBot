@@ -1,4 +1,3 @@
-import os
 import json
 from unittest.mock import MagicMock, patch
 from src.api_bot.api_bot import ApiBot
@@ -32,15 +31,11 @@ def _read_jsonl(filename):
         return [json.loads(line) for line in f if line.strip()]
 
 
-def test_persist_to_storage():
+def test_persist_to_storage(tmp_path):
     # Arrange
     args = MockArgs(avoid_storage=False)
-    log_file = "test_log.jsonl"
-    result_file = "test_result.jsonl"
-
-    for f in (log_file, result_file):
-        if os.path.exists(f):
-            os.remove(f)
+    log_file = str(tmp_path / "test_log.jsonl")
+    result_file = str(tmp_path / "test_result.jsonl")
 
     bot = ApiBot(args, ["elem1"], ["0"], log_filename=log_file, result_filename=result_file)
     bot.response_log = [{"log": "data"}]
@@ -50,26 +45,15 @@ def test_persist_to_storage():
     bot._persist_to_storage()
 
     # Assert
-    assert os.path.exists(log_file)
-    assert os.path.exists(result_file)
-
     assert _read_jsonl(log_file) == [{"log": "data"}]
     assert _read_jsonl(result_file) == [{"result": "data"}]
 
-    # Cleanup
-    os.remove(log_file)
-    os.remove(result_file)
 
-
-def test_persist_incremental_append():
+def test_persist_incremental_append(tmp_path):
     """Successive persists only append the delta, preserving earlier records."""
     args = MockArgs(avoid_storage=False)
-    log_file = "test_incremental_log.jsonl"
-    result_file = "test_incremental_result.jsonl"
-
-    for f in (log_file, result_file):
-        if os.path.exists(f):
-            os.remove(f)
+    log_file = str(tmp_path / "test_incremental_log.jsonl")
+    result_file = str(tmp_path / "test_incremental_result.jsonl")
 
     bot = ApiBot(args, ["elem1"], ["0"], log_filename=log_file, result_filename=result_file)
 
@@ -102,20 +86,12 @@ def test_persist_incremental_append():
         {"batch": 2, "idx": 2},
     ]
 
-    # Cleanup
-    os.remove(log_file)
-    os.remove(result_file)
 
-
-def test_persist_to_storage_avoid():
+def test_persist_to_storage_avoid(tmp_path):
     # Arrange
     args = MockArgs(avoid_storage=True)
-    log_file = "test_log_avoid.jsonl"
-    result_file = "test_result_avoid.jsonl"
-
-    for f in (log_file, result_file):
-        if os.path.exists(f):
-            os.remove(f)
+    log_file = str(tmp_path / "test_log_avoid.jsonl")
+    result_file = str(tmp_path / "test_result_avoid.jsonl")
 
     bot = ApiBot(args, ["elem1"], ["0"], log_filename=log_file, result_filename=result_file)
     bot.response_log = [{"log": "data"}]
@@ -125,12 +101,13 @@ def test_persist_to_storage_avoid():
     bot._persist_to_storage()
 
     # Assert
+    import os
     assert not os.path.exists(log_file)
     assert not os.path.exists(result_file)
 
 
 @patch("src.api_bot.api_bot.requests.request")
-def test_run_calls_persist_periodically(mock_request):
+def test_run_calls_persist_periodically(mock_request, tmp_path):
     # Arrange
     elements = [f"elem{i}" for i in range(55)]
     args = MockArgs(url="http://example.com/{{0}}")
@@ -142,14 +119,12 @@ def test_run_calls_persist_periodically(mock_request):
     mock_response.content = b'{"key": "value"}'
     mock_request.return_value = mock_response
 
-    bot = ApiBot(args, elements, ["0"], log_filename="periodic_log.jsonl", result_filename="periodic_result.jsonl")
+    log_file = str(tmp_path / "periodic_log.jsonl")
+    result_file = str(tmp_path / "periodic_result.jsonl")
+    bot = ApiBot(args, elements, ["0"], log_filename=log_file, result_filename=result_file)
 
     with patch.object(bot, "_persist_to_storage") as mock_persist:
         bot.run()
 
         # Should be called once at count 50 and once at the end
         assert mock_persist.call_count == 2
-
-    for f in ("periodic_log.jsonl", "periodic_result.jsonl"):
-        if os.path.exists(f):
-            os.remove(f)

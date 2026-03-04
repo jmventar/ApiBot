@@ -1,14 +1,15 @@
 import os
 import json
 
-from src.utils.json_utils import parse, store, cleanup
+from src.utils.json_utils import parse, store_jsonl_append, cleanup
 
 
 def test_load_config():
     # Arrange
     filename = "test.json"
     data = {"key": "value"}
-    store(filename, data)
+    with open(filename, "w") as f:
+        json.dump(data, f)
 
     # Act
     result = parse(filename)
@@ -20,18 +21,23 @@ def test_load_config():
     os.remove(filename)
 
 
-def test_store_overwrite_config():
+def test_store_jsonl_append():
     # Arrange
-    filename = "test.json"
-    data = {"key": "value"}
+    filename = "test_store.jsonl"
+    if os.path.exists(filename):
+        os.remove(filename)
+
+    first_batch = [{"a": 1}, {"b": 2}]
+    second_batch = [{"c": 3}]
 
     # Act
-    store(filename, data)
+    store_jsonl_append(filename, first_batch)
+    store_jsonl_append(filename, second_batch)
 
     # Assert
     with open(filename, "r") as f:
-        result = json.load(f)
-    assert result == data
+        lines = [json.loads(line) for line in f if line.strip()]
+    assert lines == [{"a": 1}, {"b": 2}, {"c": 3}]
 
     # Cleanup
     os.remove(filename)

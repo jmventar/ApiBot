@@ -76,7 +76,7 @@ Run tests with:
 python -m pytest test/
 ```
 
-Tests live in `test/` alongside sample data in `test/data/`.
+Tests live in `test/` alongside sample data in `test/data/`. Storage tests use pytest's `tmp_path` fixture for file isolation and automatic cleanup.
 
 ## CI/CD
 
