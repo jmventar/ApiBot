@@ -9,15 +9,20 @@ from requests.exceptions import RequestException
 
 from api_bot.response_log import ResponseLog
 from constants import CONTENT_TYPE_JSON, JSON_ARRAY_SOURCE
+from utils.json_utils import store_jsonl_append
 
 
 class ApiBot:
-    def __init__(self, args, elements, placeholders):
+    def __init__(self, args, elements, placeholders, log_filename=None, result_filename=None):
         self.args = args
         self.elements = elements
         self.placeholders = placeholders
+        self.log_filename = log_filename
+        self.result_filename = result_filename
         self.response_data = []
         self.response_log = []
+        self._last_persisted_log_idx = 0
+        self._last_persisted_data_idx = 0
         self._successful_requests = 0
         self._failed_by_status = {}
 
@@ -33,6 +38,22 @@ class ApiBot:
                 current_url = current_url.replace(f"#{p}#", str(value[p]))
 
         return current_url
+
+    def _persist_to_storage(self):
+        if self.args.avoid_storage:
+            return
+
+        if self.log_filename:
+            new_logs = self.response_log[self._last_persisted_log_idx:]
+            if new_logs:
+                store_jsonl_append(self.log_filename, new_logs)
+                self._last_persisted_log_idx = len(self.response_log)
+
+        if self.result_filename:
+            new_data = self.response_data[self._last_persisted_data_idx:]
+            if new_data:
+                store_jsonl_append(self.result_filename, new_data)
+                self._last_persisted_data_idx = len(self.response_data)
 
     def run(self):
         # reset counters per run
@@ -62,10 +83,12 @@ class ApiBot:
 
                     if count % 50 == 0:
                         self.show_progress(count, len(self.elements))
+                        self._persist_to_storage()
 
                     if delay > 0:
                         time.sleep(delay)
 
+            self._persist_to_storage()
             total = len(self.elements)
             failures_summary = self._format_failures_summary()
             logging.info(f"Executed all requests {Fore.YELLOW}{total}{Fore.RESET}")

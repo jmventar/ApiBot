@@ -4,7 +4,6 @@ import logging
 import pathlib
 from colorama import Fore, init
 from constants import CSV_SOURCE, DATETIME_FORMAT, JSON_ARRAY_SOURCE, JSON_SOURCE
-from utils.json_utils import store
 
 
 def parse_args():
@@ -57,6 +56,18 @@ def validate_args(args, placeholders):
         )
 
 
+def prepare_storage_paths(source_type: str):
+    data_folder = pathlib.Path().resolve() / "data"
+    if not data_folder.exists():
+        data_folder.mkdir(parents=True, exist_ok=True)
+        print(f"Created data directory: {Fore.LIGHTBLACK_EX}{data_folder}{Fore.RESET}")
+
+    timestamp = datetime.now().strftime(DATETIME_FORMAT)
+    log_path = data_folder / f"log_{timestamp}_source-{source_type}.jsonl"
+    result_path = data_folder / f"result_{timestamp}_source-{source_type}.jsonl"
+    return str(log_path), str(result_path)
+
+
 def main_api_bot():
     from api_bot.api_bot import ApiBot, find_placeholders
 
@@ -69,6 +80,8 @@ def main_api_bot():
     placeholders = find_placeholders(args.url, args.source == JSON_ARRAY_SOURCE)
 
     validate_args(args, placeholders)
+
+    log_filename, result_filename = prepare_storage_paths(args.source)
 
     if args.source == CSV_SOURCE:
         from utils.csv_utils import parse
@@ -83,34 +96,10 @@ def main_api_bot():
         else:
             elements = parse(args.file)
 
-    runner = ApiBot(args, elements, placeholders)
+    runner = ApiBot(args, elements, placeholders, log_filename, result_filename)
     logging.info(f"Given {Fore.YELLOW}{len(runner.elements)}{Fore.RESET} elements:")
     logging.info(f"{runner.elements}")
-    (result, log_data) = runner.run()
-
-    # check pathfolder exists
-    data_folder_path = f"{pathlib.Path().resolve()}/data"
-    data_folder = pathlib.Path(data_folder_path)
-
-    if not data_folder.exists():
-        data_folder.mkdir(parents=True, exist_ok=True)
-        print(
-            f"Created data directory: {Fore.LIGHTBLACK_EX}{data_folder_path}{Fore.RESET}"
-        )
-
-    # check if results not empty and avoid storage flag
-    if log_data and not args.avoid_storage:
-        store(
-            f"{data_folder_path}/log_{datetime.now().strftime(DATETIME_FORMAT)}_source-{args.source}.json",
-            log_data,
-        )
-
-    # check if log_data not empty and avoid storage flag
-    if result and not args.avoid_storage:
-        store(
-            f"{data_folder_path}/result_{datetime.now().strftime(DATETIME_FORMAT)}_source-{args.source}.json",
-            result,
-        )
+    runner.run()
 
     exit(0)
 
