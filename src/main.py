@@ -2,6 +2,7 @@ import argparse
 from datetime import datetime
 import logging
 import pathlib
+import re
 from colorama import Fore, init
 from constants import CSV_SOURCE, DATETIME_FORMAT, JSON_ARRAY_SOURCE, JSON_SOURCE
 
@@ -50,6 +51,15 @@ def validate_args(args, placeholders):
         )
         logging.warning(f"Cannot clean {args.source} duplicates")
         exit(1)
+
+    if args.clean is True and args.payload:
+        payload_placeholders = re.findall(r"{{(.*?)}}", args.payload)
+        if len(payload_placeholders) > 1:
+            logging.error(
+                f"Invalid arguments provided, {Fore.RED}-c --clean{Fore.RESET} and multiple payload placeholders found."
+            )
+            logging.warning("Cannot map multiple payload placeholders with cleaned scalar values")
+            exit(1)
 
     if args.url is None:
         logging.warning(

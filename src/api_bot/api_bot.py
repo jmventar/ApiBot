@@ -45,19 +45,63 @@ class ApiBot:
             return None
 
         payload_placeholders = re.findall(r"{{(.*?)}}", self.args.payload)
-        current_payload = self.args.payload.replace(r"{{", "#").replace(r"}}", "#")
-
-        if self.args.source == JSON_ARRAY_SOURCE:
-            current_payload = current_payload.replace("#0#", str(value))
-        elif self.args.clean is True and len(payload_placeholders) == 1:
-            current_payload = current_payload.replace(
-                f"#{payload_placeholders[0]}#", str(value)
+        try:
+            payload_template = json.loads(self.args.payload)
+        except json.JSONDecodeError as exc:
+            logging.error(
+                "Failed to decode payload template JSON: %s. Payload: %s",
+                exc,
+                self.args.payload,
             )
-        else:
-            for p in payload_placeholders:
-                current_payload = current_payload.replace(f"#{p}#", str(value[p]))
+            return None
 
-        return json.loads(current_payload)
+        try:
+            return self._replace_payload_placeholders(
+                payload_template, value, payload_placeholders
+            )
+        except KeyError as exc:
+            logging.error(
+                "Missing payload placeholder key %s for value: %s",
+                exc,
+                value,
+            )
+            return None
+
+    def _replace_payload_placeholders(self, obj, value, payload_placeholders):
+        if isinstance(obj, str):
+            updated = obj
+
+            if self.args.source == JSON_ARRAY_SOURCE:
+                return updated.replace("{{0}}", str(value))
+
+            if self.args.clean is True:
+                if len(payload_placeholders) == 1:
+                    placeholder = payload_placeholders[0]
+                    return updated.replace(f"{{{{{placeholder}}}}}", str(value))
+                return updated
+
+            for p in payload_placeholders:
+                updated = updated.replace(f"{{{{{p}}}}}", str(value[p]))
+
+            return updated
+
+        if isinstance(obj, list):
+            return [
+                self._replace_payload_placeholders(item, value, payload_placeholders)
+                for item in obj
+            ]
+
+        if isinstance(obj, dict):
+            return {
+                self._replace_payload_placeholders(
+                    key, value, payload_placeholders
+                ): self._replace_payload_placeholders(
+                    item, value, payload_placeholders
+                )
+                for key, item in obj.items()
+            }
+
+        return obj
 
     def _persist_to_storage(self):
         if self.args.avoid_storage:

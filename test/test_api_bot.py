@@ -142,6 +142,22 @@ def test_replace_payload_multiple_placeholders():
     assert payload == {"id": "1", "name": "Downtown", "map": "CritCity"}
 
 
+def test_replace_payload_special_chars_remain_valid_json():
+    args = MockArgs(
+        source="csv",
+        payload='{"name": "{{name}}"}',
+    )
+    bot = ApiBot(args, [], ["name"])
+    payload = bot.replace_payload_elements({"name": 'A "quoted" value\nnext line'})
+    assert payload == {"name": 'A "quoted" value\nnext line'}
+
+
+def test_replace_payload_invalid_json_template_returns_none():
+    args = MockArgs(source="json", payload='{"id": {{id}}}')
+    bot = ApiBot(args, [], ["id"])
+    assert bot.replace_payload_elements({"id": 7}) is None
+
+
 # ============================================================
 # find_placeholders
 # ============================================================
@@ -200,6 +216,12 @@ def test_validate_args_valid_clean_single_placeholder():
 def test_validate_args_valid_no_clean():
     args = MockArgs(source="json", clean=False)
     validate_args(args, ["id", "name"])
+
+
+def test_validate_args_clean_multiple_payload_placeholders_exits():
+    args = MockArgs(source="json", clean=True, payload='{"a":"{{a}}","b":"{{b}}"}')
+    with pytest.raises(SystemExit):
+        validate_args(args, ["id"])
 
 
 # ============================================================
