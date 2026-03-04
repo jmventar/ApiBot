@@ -17,9 +17,10 @@ src/
     response_log.py        # ResponseLog data class for structured logging
   utils/
     csv_utils.py           # CSV file parser (DictReader-based)
-    json_utils.py          # JSON file parser, array cleanup/dedup, result storage
+    json_utils.py          # JSON file parser, array cleanup/dedup, JSONL append storage
 test/
   test_json_utils.py       # Unit tests for JSON utilities
+  test_api_bot_storage.py  # Unit tests for persistence (incremental JSONL writes)
   data/                    # Sample input files for tests (JSON and CSV)
 scripts/                   # Sample shell scripts for common operations
 .github/workflows/
@@ -46,7 +47,7 @@ URLs use `{{key}}` placeholders that get replaced with values from the input fil
 
 ### Output
 
-Results and logs are written to `data/` (auto-created) as timestamped JSON files unless `--avoid-storage` is passed. To prevent data loss in long executions, progress is persisted to these files every 50 requests and at the completion of all requests. The `data/` directory is git-ignored.
+Results and logs are written to `data/` (auto-created) as timestamped JSONL files (one JSON object per line) unless `--avoid-storage` is passed. Filenames follow the pattern `log_<timestamp>_source-<source>.jsonl` and `result_<timestamp>_source-<source>.jsonl`. To prevent data loss in long executions, progress is persisted incrementally every 50 requests and at the completion of all requests — each save appends only the new records since the last save, keeping I/O cost bounded regardless of total run size. The `data/` directory is git-ignored.
 
 ## Coding conventions
 

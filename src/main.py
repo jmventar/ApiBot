@@ -65,8 +65,8 @@ def prepare_storage_paths(source_type: str):
         print(f"Created data directory: {Fore.LIGHTBLACK_EX}{data_folder_path}{Fore.RESET}")
 
     timestamp = datetime.now().strftime(DATETIME_FORMAT)
-    log_filename = f"{data_folder_path}/log_{timestamp}_source-{source_type}.json"
-    result_filename = f"{data_folder_path}/result_{timestamp}_source-{source_type}.json"
+    log_filename = f"{data_folder_path}/log_{timestamp}_source-{source_type}.jsonl"
+    result_filename = f"{data_folder_path}/result_{timestamp}_source-{source_type}.jsonl"
     return log_filename, result_filename
 
 

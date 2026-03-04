@@ -9,7 +9,7 @@ from requests.exceptions import RequestException
 
 from api_bot.response_log import ResponseLog
 from constants import CONTENT_TYPE_JSON, JSON_ARRAY_SOURCE
-from utils.json_utils import store
+from utils.json_utils import store_jsonl_append
 
 
 class ApiBot:
@@ -21,6 +21,8 @@ class ApiBot:
         self.result_filename = result_filename
         self.response_data = []
         self.response_log = []
+        self._last_persisted_log_idx = 0
+        self._last_persisted_data_idx = 0
         self._successful_requests = 0
         self._failed_by_status = {}
 
@@ -41,11 +43,17 @@ class ApiBot:
         if self.args.avoid_storage:
             return
 
-        if self.log_filename and self.response_log:
-            store(self.log_filename, self.response_log)
+        if self.log_filename:
+            new_logs = self.response_log[self._last_persisted_log_idx:]
+            if new_logs:
+                store_jsonl_append(self.log_filename, new_logs)
+                self._last_persisted_log_idx = len(self.response_log)
 
-        if self.result_filename and self.response_data:
-            store(self.result_filename, self.response_data)
+        if self.result_filename:
+            new_data = self.response_data[self._last_persisted_data_idx:]
+            if new_data:
+                store_jsonl_append(self.result_filename, new_data)
+                self._last_persisted_data_idx = len(self.response_data)
 
     def run(self):
         # reset counters per run
