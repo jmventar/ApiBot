@@ -8,7 +8,7 @@ Check `.vscode/launch.json` for test runs using **Visual Studio Code**
 
 `-f` parameter is mandatory, with an input file (json object as default, also accepts json arrays and csv).
 
-`usage: main.py [-h] --file FILE [--clean] [--source {json,csv}] [--dry] [--method METHOD] [--response-stored] [--url URL] [--token TOKEN] [--delay DELAY]`
+`usage: main.py [-h] --file FILE [--clean] [--source {json,json_array,csv}] [--dry] [--method METHOD] [--avoid-storage] [--url URL] [--token TOKEN] [--delay DELAY]`
 
 ##### Options
 
@@ -29,7 +29,7 @@ To avoid make request, use --dry for dry run or don't specify -u URL
 
 Cleanup multiple response arrays in a single set without duplicates
 
-`py ./data/main.py -clean -f ./data/single_replace.json`
+`python ./src/main.py --clean -f ./test/data/single_replace.json`
 
 #### Replacer
 
@@ -43,13 +43,9 @@ Special case is for json arrays, where a `{{0}}` needs to be specified in url. T
 
 Sample launch GET requests
 
-`py ./src/main.py -clean -f ./data/single_replace.json -m GET -u https://jsonplaceholder.typicode.com/posts/{{post_num}} -t 123456 -d 2.5`
+`python ./src/main.py --clean -f ./test/data/single_replace.json -m GET -u https://jsonplaceholder.typicode.com/posts/{{post_num}} -t 123456 -d 2.5`
 
-`py ./src/main.py -f ./data/multiple_replace.csv -m GET -u https://jsonplaceholder.typicode.com/posts/{{id}}}/{{name}}/{{map_id}}/{{map}} -t 123456`
-
-#### Sample scripts
-
-Ready-to-use shell scripts for common operations are available in the `scripts/` directory. See `scripts/insurances_availability.sh` for an example of running batch POST requests.
+`python ./src/main.py -f ./test/data/multiple_replace.csv -s csv -m GET -u "https://jsonplaceholder.typicode.com/posts/{{id}}/{{name}}/{{map_id}}/{{map}}" -t 123456`
 
 #### AI coding agents
 
