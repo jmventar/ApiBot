@@ -19,13 +19,14 @@ src/
     csv_utils.py           # CSV file parser (DictReader-based)
     json_utils.py          # JSON file parser, array cleanup/dedup, JSONL append storage
 test/
-  test_json_utils.py       # Unit tests for JSON utilities
-  test_api_bot_storage.py  # Unit tests for persistence (incremental JSONL writes)
+  test_utils.py            # Unit tests for JSON and CSV parsers/utilities
+  test_api_bot.py          # Unit tests for ApiBot (replacement, storage, validation, tracking)
   data/                    # Sample input files for tests (JSON and CSV)
-scripts/                   # Sample shell scripts for common operations
 .github/workflows/
   python-app.yml           # CI: lint (flake8) + test (pytest) on PRs to main
   gitleaks_pr.yml          # Secret scanning on PRs
+README.md                  # Project documentation and usage guide
+AGENTS.md                  # Guidelines for AI coding agents
 ```
 
 ## Key concepts

@@ -8,7 +8,6 @@ def parse(filename: str):
     with open(filename) as jsonfile:
         data = json.load(jsonfile)
         print(f"Read successful {filename}")
-        jsonfile.close()
         return data
 
 
@@ -20,7 +19,6 @@ def store_jsonl_append(filename: str, items: list):
     print(f"Appended {Fore.YELLOW}{len(items)}{Fore.RESET} records to {Fore.LIGHTCYAN_EX}{filename}{Fore.RESET}")
 
 
-# TODO this is a crap, specific method also on replace for single elements != all CSV + multiple JSON
 def cleanup(filename):
     json_data = parse(filename)
 
