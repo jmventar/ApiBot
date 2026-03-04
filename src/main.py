@@ -57,17 +57,15 @@ def validate_args(args, placeholders):
 
 
 def prepare_storage_paths(source_type: str):
-    # Prepare data folder and filenames
-    data_folder_path = f"{pathlib.Path().resolve()}/data"
-    data_folder = pathlib.Path(data_folder_path)
+    data_folder = pathlib.Path().resolve() / "data"
     if not data_folder.exists():
         data_folder.mkdir(parents=True, exist_ok=True)
-        print(f"Created data directory: {Fore.LIGHTBLACK_EX}{data_folder_path}{Fore.RESET}")
+        print(f"Created data directory: {Fore.LIGHTBLACK_EX}{data_folder}{Fore.RESET}")
 
     timestamp = datetime.now().strftime(DATETIME_FORMAT)
-    log_filename = f"{data_folder_path}/log_{timestamp}_source-{source_type}.jsonl"
-    result_filename = f"{data_folder_path}/result_{timestamp}_source-{source_type}.jsonl"
-    return log_filename, result_filename
+    log_path = data_folder / f"log_{timestamp}_source-{source_type}.jsonl"
+    result_path = data_folder / f"result_{timestamp}_source-{source_type}.jsonl"
+    return str(log_path), str(result_path)
 
 
 def main_api_bot():

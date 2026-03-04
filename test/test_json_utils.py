@@ -1,12 +1,11 @@
-import os
 import json
 
 from src.utils.json_utils import parse, store_jsonl_append, cleanup
 
 
-def test_load_config():
+def test_load_config(tmp_path):
     # Arrange
-    filename = "test.json"
+    filename = str(tmp_path / "test.json")
     data = {"key": "value"}
     with open(filename, "w") as f:
         json.dump(data, f)
@@ -17,16 +16,10 @@ def test_load_config():
     # Assert
     assert result == data
 
-    # Cleanup
-    os.remove(filename)
 
-
-def test_store_jsonl_append():
+def test_store_jsonl_append(tmp_path):
     # Arrange
-    filename = "test_store.jsonl"
-    if os.path.exists(filename):
-        os.remove(filename)
-
+    filename = str(tmp_path / "test_store.jsonl")
     first_batch = [{"a": 1}, {"b": 2}]
     second_batch = [{"c": 3}]
 
@@ -39,13 +32,10 @@ def test_store_jsonl_append():
         lines = [json.loads(line) for line in f if line.strip()]
     assert lines == [{"a": 1}, {"b": 2}, {"c": 3}]
 
-    # Cleanup
-    os.remove(filename)
 
-
-def test_arrays_to_set():
+def test_arrays_to_set(tmp_path):
     # Arrange
-    filename = "test.json"
+    filename = str(tmp_path / "test.json")
     data = [
         {"test": 1, "test1": 1, "test2": 2, "test3": 5, "test4": 6},
         {"test": 3, "test1": 4, "test2": 5, "test3": 6, "test5": 7, "test7": 8},
@@ -62,6 +52,3 @@ def test_arrays_to_set():
     assert len(result) == 9
     expected = {1, 2, 3, 4, 5, 6, 7, 8, 9}
     assert result == expected
-
-    # Cleanup
-    os.remove(filename)
