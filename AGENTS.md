@@ -4,7 +4,7 @@ Guidelines for AI coding agents working on this repository.
 
 ## Project overview
 
-**ApiBot** is a Python CLI tool for running batches of HTTP requests, similar to Postman's "Run Collection" feature. It reads input data from JSON, JSON-array, or CSV files, replaces URL placeholders with values from the data, and executes the requests sequentially with optional delay, logging, and result storage.
+**ApiBot** is a Python CLI tool for running batches of HTTP requests, similar to Postman's "Run Collection" feature. It reads input data from JSON, JSON-array, or CSV files, replaces URL placeholders with values from the data, supports placeholder substitution in JSON payload templates, and executes the requests sequentially with optional delay, logging, and result storage.
 
 ## Project structure
 
@@ -13,7 +13,7 @@ src/
   main.py                  # Entry point: argument parsing, orchestration, result storage
   constants.py             # Shared constants (source types, datetime format, content types)
   api_bot/
-    api_bot.py             # Core ApiBot class (request execution, URL placeholder replacement)
+    api_bot.py             # Core ApiBot class (request execution, URL/payload placeholder replacement)
     response_log.py        # ResponseLog data class for structured logging
   utils/
     csv_utils.py           # CSV file parser (DictReader-based)
@@ -31,12 +31,19 @@ AGENTS.md                  # Guidelines for AI coding agents
 
 ## Key concepts
 
-### URL placeholder replacement
+### URL and payload placeholder replacement
 
 URLs use `{{key}}` placeholders that get replaced with values from the input file:
 
 - **JSON/CSV**: each placeholder name maps to a property/column header (e.g. `{{sourceId}}` maps to the `sourceId` field).
 - **JSON arrays**: use `{{0}}` as the single placeholder; the array values are deduplicated into a Python set when `--clean` is used.
+
+Payload templates passed with `--payload` use the same placeholder syntax and are substituted per input row:
+
+- Placeholders are auto-detected from `--payload` by bracket pattern `{{...}}`.
+- **JSON/CSV** rows map `{{key}}` to the current row value.
+- **JSON arrays** use `{{0}}`.
+- The final rendered payload is parsed as JSON before calling `requests.request(..., json=...)`.
 
 ### Input sources (`--source`)
 
