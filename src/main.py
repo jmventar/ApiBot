@@ -4,7 +4,6 @@ import logging
 import pathlib
 from colorama import Fore, init
 from constants import CSV_SOURCE, DATETIME_FORMAT, JSON_ARRAY_SOURCE, JSON_SOURCE
-from utils.json_utils import store
 
 
 def parse_args():
