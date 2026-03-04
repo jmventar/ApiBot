@@ -19,7 +19,7 @@ Check `.vscode/launch.json` for test runs using **Visual Studio Code**
 - `--source {json, json_array, csv}, -s {json, json_array, csv}` json is default format for input, default **json**
 - `--dry` dry run, run without executing requests
 - `--method METHOD, -m METHOD` request method, default **GET**
-- `--avoid-storage` don't create `data/result_{current_date}.json` results file and `data/log_{current_date}.json` log file. **false by default.**
+- `--avoid-storage` don't create `data/result_{current_date}.json` results file and `data/log_{current_date}.json` log file. **false by default.** Logs and results are stored periodically every 50 requests and at the end of the run.
 - `--token TOKEN, -t TOKEN` bearer token if needed
 - `--delay DELAY, -d DELAY` delay between requests in seconds, accepts deciaml values
 

@@ -46,7 +46,7 @@ URLs use `{{key}}` placeholders that get replaced with values from the input fil
 
 ### Output
 
-Results and logs are written to `data/` (auto-created) as timestamped JSON files unless `--avoid-storage` is passed. The `data/` directory is git-ignored.
+Results and logs are written to `data/` (auto-created) as timestamped JSON files unless `--avoid-storage` is passed. To prevent data loss in long executions, progress is persisted to these files every 50 requests and at the completion of all requests. The `data/` directory is git-ignored.
 
 ## Coding conventions
 
