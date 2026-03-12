@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from src.api_bot.api_bot import ApiBot, find_placeholders
-from src.main import validate_args
+from src.main import parse_args, validate_args
 
 
 class MockArgs:
@@ -20,6 +20,12 @@ class MockArgs:
         token="test-token",
         avoid_storage=False,
         clean=False,
+        file="input.json",
+        upload_csv=False,
+        upload_field="csvFile",
+        max_rows_per_upload=5000,
+        encoding="utf-8",
+        delimiter=",",
     ):
         self.url = url
         self.source = source
@@ -30,12 +36,41 @@ class MockArgs:
         self.token = token
         self.avoid_storage = avoid_storage
         self.clean = clean
+        self.file = file
+        self.upload_csv = upload_csv
+        self.upload_field = upload_field
+        self.max_rows_per_upload = max_rows_per_upload
+        self.encoding = encoding
+        self.delimiter = delimiter
 
 
 def _read_jsonl(filename):
     """Read a JSONL file and return a list of parsed objects."""
     with open(filename, "r") as f:
         return [json.loads(line) for line in f if line.strip()]
+
+
+# ============================================================
+# parse_args
+# ============================================================
+
+def test_parse_args_upload_csv_defaults_to_post():
+    args = parse_args(
+        [
+            "--file",
+            "contacts.csv",
+            "--upload-csv",
+            "--url",
+            "https://example.com/api/v3/upload-csv",
+        ]
+    )
+
+    assert args.upload_csv is True
+    assert args.method == "POST"
+    assert args.max_rows_per_upload == 5000
+    assert args.upload_field == "csvFile"
+    assert args.encoding == "utf-8"
+    assert args.delimiter == ","
 
 
 # ============================================================
@@ -187,6 +222,21 @@ def test_find_placeholders_no_placeholders_exits():
         find_placeholders("http://example.com/no-placeholders")
 
 
+def test_find_placeholders_allows_static_url_for_upload_mode():
+    assert find_placeholders("http://example.com/upload-csv", allow_static=True) == []
+
+
+def test_find_placeholders_upload_mode_ignores_json_array_source():
+    assert (
+        find_placeholders(
+            "http://example.com/upload-csv",
+            jsonArray=True,
+            allow_static=True,
+        )
+        == []
+    )
+
+
 # ============================================================
 # validate_args
 # ============================================================
@@ -222,6 +272,84 @@ def test_validate_args_clean_multiple_payload_placeholders_exits():
     args = MockArgs(source="json", clean=True, payload='{"a":"{{a}}","b":"{{b}}"}')
     with pytest.raises(SystemExit):
         validate_args(args, ["id"])
+
+
+def test_validate_args_upload_csv_requires_csv_file():
+    args = MockArgs(
+        file="input.json",
+        source="json",
+        upload_csv=True,
+        url="http://example.com/upload-csv",
+    )
+
+    with pytest.raises(SystemExit):
+        validate_args(args, [])
+
+
+def test_validate_args_upload_csv_requires_url():
+    args = MockArgs(file="contacts.csv", upload_csv=True, url=None)
+
+    with pytest.raises(SystemExit):
+        validate_args(args, [])
+
+
+def test_validate_args_upload_csv_allows_static_url():
+    args = MockArgs(
+        file="contacts.csv",
+        source="json",
+        upload_csv=True,
+        url="http://example.com/upload-csv",
+    )
+
+    validate_args(args, [])
+
+
+def test_validate_args_upload_csv_rejects_placeholder_url():
+    args = MockArgs(
+        file="contacts.csv",
+        source="json",
+        upload_csv=True,
+        url="http://example.com/upload-csv/{{id}}",
+    )
+
+    with pytest.raises(SystemExit):
+        validate_args(args, ["id"])
+
+
+def test_validate_args_upload_csv_requires_non_empty_upload_field():
+    args = MockArgs(
+        file="contacts.csv",
+        upload_csv=True,
+        url="http://example.com/upload-csv",
+        upload_field="",
+    )
+
+    with pytest.raises(SystemExit):
+        validate_args(args, [])
+
+
+def test_validate_args_upload_csv_requires_single_character_delimiter():
+    args = MockArgs(
+        file="contacts.csv",
+        upload_csv=True,
+        url="http://example.com/upload-csv",
+        delimiter="::",
+    )
+
+    with pytest.raises(SystemExit):
+        validate_args(args, [])
+
+
+def test_validate_args_upload_csv_requires_known_encoding():
+    args = MockArgs(
+        file="contacts.csv",
+        upload_csv=True,
+        url="http://example.com/upload-csv",
+        encoding="definitely-not-a-real-encoding",
+    )
+
+    with pytest.raises(SystemExit):
+        validate_args(args, [])
 
 
 # ============================================================
@@ -340,6 +468,24 @@ def test_persist_to_storage_avoid(tmp_path):
 
 
 # ============================================================
+# log_response
+# ============================================================
+
+def test_log_response_appends_json_object_as_single_result():
+    bot = ApiBot(MockArgs(), [], ["0"])
+
+    response = MagicMock()
+    response.status_code = 200
+    response.headers = {"content-type": "application/json"}
+    response.json.return_value = {"key": "value"}
+    response.content = b'{"key":"value"}'
+
+    bot.log_response("GET", "http://example.com/items/1", 1, response)
+
+    assert bot.response_data == [{"key": "value"}]
+
+
+# ============================================================
 # run (integration-level)
 # ============================================================
 
@@ -379,6 +525,56 @@ def test_run_passes_none_when_no_payload():
                 bot.run()
 
     assert mock_execute.call_args_list[0].args[3] is None
+
+
+@patch("src.api_bot.api_bot.requests.request")
+def test_run_upload_csv_splits_batches_and_posts_multipart_files(
+    mock_request, tmp_path
+):
+    csv_file = tmp_path / "contacts.csv"
+    csv_file.write_text("id,name\n1,Alice\n2,Bob\n3,Carla\n", encoding="utf-8")
+
+    args = MockArgs(
+        source="json",
+        method="POST",
+        url="http://example.com/upload-csv",
+        file=str(csv_file),
+        upload_csv=True,
+        max_rows_per_upload=2,
+    )
+    bot = ApiBot(args, [str(csv_file)], [])
+
+    mock_response = MagicMock()
+    mock_response.status_code = 202
+    mock_response.headers = {"content-type": "text/plain"}
+    mock_response.content = b"accepted"
+    mock_request.return_value = mock_response
+
+    batch_dir = tmp_path / "upload_run"
+    with patch("src.api_bot.api_bot.tempfile.mkdtemp", return_value=str(batch_dir)):
+        with patch.object(ApiBot, "log_response"):
+            with patch.object(bot, "_persist_to_storage"):
+                bot.run()
+
+    assert mock_request.call_count == 2
+
+    first_call = mock_request.call_args_list[0]
+    assert first_call.args == ("POST", "http://example.com/upload-csv")
+    assert first_call.kwargs["headers"] == {"Authorization": "Bearer test-token"}
+    assert first_call.kwargs["data"] == {}
+    assert first_call.kwargs["files"][0][0] == "csvFile"
+    assert first_call.kwargs["files"][0][1][0] == "contacts_batch_001.csv"
+    assert first_call.kwargs["files"][0][1][2] == "application/octet-stream"
+
+    second_call = mock_request.call_args_list[1]
+    assert second_call.kwargs["files"][0][1][0] == "contacts_batch_002.csv"
+
+    assert batch_dir.joinpath("contacts_batch_001.csv").read_text(encoding="utf-8") == (
+        "id,name\n1,Alice\n2,Bob\n"
+    )
+    assert batch_dir.joinpath("contacts_batch_002.csv").read_text(encoding="utf-8") == (
+        "id,name\n3,Carla\n"
+    )
 
 @patch("src.api_bot.api_bot.requests.request")
 def test_run_calls_persist_periodically(mock_request, tmp_path):
