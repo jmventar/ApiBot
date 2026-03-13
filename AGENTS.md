@@ -43,7 +43,7 @@ Payload templates passed with `--payload` use the same placeholder syntax and ar
 - Placeholders are auto-detected from `--payload` by bracket pattern `{{...}}`.
 - **JSON/CSV** rows map `{{key}}` to the current row value.
 - **JSON arrays** use `{{0}}`.
-- The final rendered payload is parsed as JSON before calling `requests.request(..., json=...)`.
+- The final rendered payload is parsed as JSON before the request is sent. All HTTP requests go through a single `requests.Session` per run (see below), so `ApiBot.execute()` is always called with a session and uses `session.request()`.
 
 ### Input sources (`--source`)
 
@@ -63,7 +63,7 @@ Results and logs are written to `data/` (auto-created) as timestamped JSONL file
 - **`argparse`** for CLI argument parsing.
 - **`colorama`** for colored terminal output via `Fore` and `Style`.
 - **`logging`** module at INFO level for all operational messages.
-- **`requests`** library with session-based Bearer token auth.
+- **`requests`** library: a single `requests.Session` is used per run (normal and upload paths) for connection pooling and Bearer token auth. `ApiBot.execute(method, url, headers, json_data, ..., session=session)` requires a `session` and calls `session.request()`.
 - No type-checking tooling configured; type hints are used sparingly.
 - Use `flake8` for linting: max complexity 10, max line length 127.
 

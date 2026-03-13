@@ -1,7 +1,10 @@
 CSV_SOURCE = "csv"
 JSON_ARRAY_SOURCE = "json_array"
 JSON_SOURCE = "json"
+UPLOAD_CSV_MODE = "upload_csv"
 
 CONTENT_TYPE_JSON = "json"
+DEFAULT_MAX_ROWS_PER_CSV_BATCH = 5000
+DEFAULT_UPLOAD_FIELD = "csvFile"
 
 DATETIME_FORMAT = "%Y_%m_%d-%H_%M_%S"

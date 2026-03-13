@@ -1,6 +1,8 @@
 import logging
 import json
 import re
+import pathlib
+import tempfile
 import time
 from datetime import datetime
 
@@ -10,6 +12,11 @@ from requests.exceptions import RequestException
 
 from api_bot.response_log import ResponseLog
 from constants import CONTENT_TYPE_JSON, JSON_ARRAY_SOURCE
+from utils.csv_batch_utils import (
+    build_csv_batches_from_rows,
+    load_csv_rows,
+    suggest_batches,
+)
 from utils.json_utils import store_jsonl_append
 
 
@@ -119,6 +126,87 @@ class ApiBot:
                 store_jsonl_append(self.result_filename, new_data)
                 self._last_persisted_data_idx = len(self.response_data)
 
+    def _build_headers(self):
+        if self.args.token is None:
+            return {}
+        return {"Authorization": f"Bearer {self.args.token}"}
+
+    def _prepare_upload_output_dir(self, csv_file: pathlib.Path) -> pathlib.Path:
+        data_dir = pathlib.Path().resolve() / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        output_dir = tempfile.mkdtemp(prefix=f"{csv_file.stem}_upload_", dir=data_dir)
+        return pathlib.Path(output_dir)
+
+    def _run_upload_csv(self, method: str, headers, delay: float):
+        csv_file = pathlib.Path(self.args.file)
+        output_dir = self._prepare_upload_output_dir(csv_file)
+        header, rows = load_csv_rows(
+            csv_file=csv_file,
+            delimiter=self.args.delimiter,
+            encoding=self.args.encoding,
+        )
+        total_rows = len(rows)
+        total_batches = suggest_batches(total_rows, self.args.max_rows_per_upload)
+        logging.info(f"CSV rows to split: {total_rows}")
+        logging.info(f"CSV upload batches to create: {total_batches}")
+        _, _, batch_details = build_csv_batches_from_rows(
+            csv_file=csv_file,
+            header=header,
+            rows=rows,
+            max_rows_per_batch=self.args.max_rows_per_upload,
+            output_dir=output_dir,
+            delimiter=self.args.delimiter,
+            output_encoding=self.args.encoding,
+        )
+
+        total_batches = len(batch_details)
+        with requests.Session() as session:
+            session.headers.update(headers)
+            for count, (batch_file, _) in enumerate(batch_details, start=1):
+                with batch_file.open("rb") as batch_stream:
+                    files = [
+                        (
+                            self.args.upload_field,
+                            (
+                                batch_file.name,
+                                batch_stream,
+                                "text/csv",
+                            ),
+                        )
+                    ]
+                    response = self.execute(
+                        session,
+                        method,
+                        self.args.url,                    
+                        files=files
+                    )
+
+                if response is not None:
+                    self.log_response(method, self.args.url, count, response)
+                    if 200 <= response.status_code < 300:
+                        self.register_success()
+                    else:
+                        self.register_failure(response.status_code)
+
+                if count % 50 == 0:
+                    self.show_progress(count, total_batches)
+                    self._persist_to_storage()
+
+                if delay > 0:
+                    time.sleep(delay)
+
+        self._persist_to_storage()
+        failures_summary = self._format_failures_summary()
+        logging.info(
+            f"Uploaded all CSV batches {Fore.YELLOW}{total_batches}{Fore.RESET}"
+        )
+        logging.info(
+            f"Success: {self.get_status_color(200)}{self._successful_requests}{Fore.RESET}"
+            f"{failures_summary}"
+        )
+
+        return (self.response_data, self.response_log)
+
     def run(self):
         # reset counters per run
         self._successful_requests = 0
@@ -130,14 +218,20 @@ class ApiBot:
         else:
             method = self.args.method.upper()
             delay = self.args.delay
+            headers = self._build_headers()
+
+            if self.args.upload_csv:
+                return self._run_upload_csv(method, headers, delay)
 
             with requests.Session() as session:
-                session.headers.update({"Authorization": f"Bearer {self.args.token}"})
+                session.headers.update(headers)
 
                 for count, elem in enumerate(self.elements, start=1):
                     current_url = self.replace_elements(elem)
                     json_data = self.replace_payload_elements(elem)
-                    response = self.execute(method, current_url, session.headers, json_data)
+                    response = self.execute(
+                        session, method, current_url, json_data
+                    )
 
                     if response is not None:
                         self.log_response(method, current_url, count, response)
@@ -205,8 +299,12 @@ class ApiBot:
 
         is_json_response: bool = False
         if result_content is not None and CONTENT_TYPE_JSON in result_content:
-            logging.info(f"{response.json()}")
-            self.response_data.extend(response.json())
+            response_json = response.json()
+            logging.info(f"{response_json}")
+            if isinstance(response_json, list):
+                self.response_data.extend(response_json)
+            else:
+                self.response_data.append(response_json)
             is_json_response = True
 
         log_data = ResponseLog(response, result_length, is_json_response)
@@ -221,9 +319,16 @@ class ApiBot:
         )
 
     @staticmethod
-    def execute(method: str, url: str, headers, json_data):
+    def execute(session, method: str, url: str, json_data=None, files=None):
         try:
-            return requests.request(method, url, headers=headers, json=json_data)
+            return session.request(
+                method,
+                url,
+                headers=session.headers,
+                json=json_data,
+                data=None, # NOT supported option
+                files=files,
+            )
         except RequestException as e:
             logging.error(f"Request failed: {e}")
             return None
@@ -252,7 +357,15 @@ class ApiBot:
                 return Fore.LIGHTRED_EX
 
 
-def find_placeholders(url: str, jsonArray: bool = False):
+def find_placeholders(
+    url: str, jsonArray: bool = False, allow_static: bool = False
+):
+    if allow_static and url is not None:
+        placeholders = re.findall(r"{{(.*?)}}", url)
+        if placeholders:
+            return placeholders
+        return []
+
     if jsonArray or url is None:
         return ["0"]
 
@@ -260,6 +373,8 @@ def find_placeholders(url: str, jsonArray: bool = False):
     placeholder_length = len(placeholders)
 
     if placeholder_length < 1:
+        if allow_static:
+            return []
         logging.error(f"No elements to replace on URL ({url})")
         exit(1)
 
