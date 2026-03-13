@@ -63,6 +63,7 @@ Payload placeholders are auto-detected from brackets in `--payload` (same `{{key
 - The source CSV is always split before upload.
 - Each batch contains up to `5000` data rows by default. Override this with `--max-rows-per-upload`.
 - Each generated batch is uploaded sequentially as multipart form-data using the `csvFile` field by default, or a custom field from `--upload-field`.
+- All batch requests use a single HTTP session (connection pooling) for better performance on large uploads.
 - `--source` and `--payload` continue to apply to the existing placeholder-based request flow; upload mode is a separate path.
 
 #### Sample requests

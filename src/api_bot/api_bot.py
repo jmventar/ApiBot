@@ -160,40 +160,40 @@ class ApiBot:
         )
 
         total_batches = len(batch_details)
-        for count, (batch_file, _) in enumerate(batch_details, start=1):
-            with batch_file.open("rb") as batch_stream:
-                files = [
-                    (
-                        self.args.upload_field,
+        with requests.Session() as session:
+            session.headers.update(headers)
+            for count, (batch_file, _) in enumerate(batch_details, start=1):
+                with batch_file.open("rb") as batch_stream:
+                    files = [
                         (
-                            batch_file.name,
-                            batch_stream,
-                            "application/octet-stream",
-                        ),
+                            self.args.upload_field,
+                            (
+                                batch_file.name,
+                                batch_stream,
+                                "text/csv",
+                            ),
+                        )
+                    ]
+                    response = self.execute(
+                        session,
+                        method,
+                        self.args.url,                    
+                        files=files
                     )
-                ]
-                response = self.execute(
-                    method,
-                    self.args.url,
-                    headers,
-                    None,
-                    {},
-                    files,
-                )
 
-            if response is not None:
-                self.log_response(method, self.args.url, count, response)
-                if 200 <= response.status_code < 300:
-                    self.register_success()
-                else:
-                    self.register_failure(response.status_code)
+                if response is not None:
+                    self.log_response(method, self.args.url, count, response)
+                    if 200 <= response.status_code < 300:
+                        self.register_success()
+                    else:
+                        self.register_failure(response.status_code)
 
-            if count % 50 == 0:
-                self.show_progress(count, total_batches)
-                self._persist_to_storage()
+                if count % 50 == 0:
+                    self.show_progress(count, total_batches)
+                    self._persist_to_storage()
 
-            if delay > 0:
-                time.sleep(delay)
+                if delay > 0:
+                    time.sleep(delay)
 
         self._persist_to_storage()
         failures_summary = self._format_failures_summary()
@@ -229,7 +229,9 @@ class ApiBot:
                 for count, elem in enumerate(self.elements, start=1):
                     current_url = self.replace_elements(elem)
                     json_data = self.replace_payload_elements(elem)
-                    response = self.execute(method, current_url, session.headers, json_data)
+                    response = self.execute(
+                        session, method, current_url, json_data
+                    )
 
                     if response is not None:
                         self.log_response(method, current_url, count, response)
@@ -317,14 +319,14 @@ class ApiBot:
         )
 
     @staticmethod
-    def execute(method: str, url: str, headers, json_data, data=None, files=None):
+    def execute(session, method: str, url: str, json_data=None, files=None):
         try:
-            return requests.request(
+            return session.request(
                 method,
                 url,
-                headers=headers,
+                headers=session.headers,
                 json=json_data,
-                data=data,
+                data=None, # NOT supported option
                 files=files,
             )
         except RequestException as e:
