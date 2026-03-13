@@ -2,6 +2,13 @@ import json
 
 import pytest
 
+from src.utils.csv_batch_utils import (
+    get_batch_sizes,
+    load_csv_rows,
+    split_csv,
+    split_csv_by_max_rows,
+    suggest_batches,
+)
 from src.utils.json_utils import parse, store_jsonl_append, cleanup
 from src.utils.csv_utils import parse as csv_parse
 
@@ -94,3 +101,89 @@ def test_csv_parse_empty(tmp_path):
     result = csv_parse(str(csv_file))
 
     assert result == []
+
+
+# --- csv_batch_utils ---
+
+def test_get_batch_sizes():
+    assert get_batch_sizes(total_rows=5, batches=3) == [2, 2, 1]
+
+
+def test_load_csv_rows_strips_utf8_bom_from_header(tmp_path):
+    csv_file = tmp_path / "bom.csv"
+    csv_file.write_text("\ufeffid,name\n1,Alice\n", encoding="utf-8")
+
+    header, rows = load_csv_rows(csv_file, delimiter=",", encoding="utf-8")
+
+    assert header == ["id", "name"]
+    assert rows == [["1", "Alice"]]
+
+
+def test_load_csv_rows_rejects_empty_csv(tmp_path):
+    csv_file = tmp_path / "empty.csv"
+    csv_file.write_text("", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="empty"):
+        load_csv_rows(csv_file, delimiter=",", encoding="utf-8")
+
+
+def test_load_csv_rows_rejects_header_only_csv(tmp_path):
+    csv_file = tmp_path / "header_only.csv"
+    csv_file.write_text("id,name\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="no data rows"):
+        load_csv_rows(csv_file, delimiter=",", encoding="utf-8")
+
+
+def test_split_csv_by_max_rows_writes_numbered_batches(tmp_path):
+    csv_file = tmp_path / "contacts.csv"
+    csv_file.write_text("id,name\n1,Alice\n2,Bob\n3,Carla\n", encoding="utf-8")
+    output_dir = tmp_path / "upload_run_001"
+
+    created_dir, total_rows, batch_details = split_csv_by_max_rows(
+        csv_file=csv_file,
+        max_rows_per_batch=2,
+        delimiter=",",
+        encoding="utf-8",
+        output_dir=output_dir,
+    )
+
+    assert created_dir == output_dir
+    assert total_rows == 3
+    assert [(batch_file.name, row_count) for batch_file, row_count in batch_details] == [
+        ("contacts_batch_001.csv", 2),
+        ("contacts_batch_002.csv", 1),
+    ]
+    assert output_dir.joinpath("contacts_batch_001.csv").read_text(encoding="utf-8") == (
+        "id,name\n1,Alice\n2,Bob\n"
+    )
+    assert output_dir.joinpath("contacts_batch_002.csv").read_text(encoding="utf-8") == (
+        "id,name\n3,Carla\n"
+    )
+
+
+def test_suggest_batches_uses_default_max_rows():
+    assert suggest_batches(total_rows=10001) == 3
+
+
+def test_split_csv_with_explicit_batches_distributes_rows_evenly(tmp_path):
+    csv_file = tmp_path / "contacts.csv"
+    csv_file.write_text(
+        "id,name\n1,Alice\n2,Bob\n3,Carla\n4,David\n5,Emma\n", encoding="utf-8"
+    )
+    output_dir = tmp_path / "manual_batches"
+
+    created_dir, total_rows, batch_details = split_csv(
+        csv_file=csv_file,
+        batches=2,
+        delimiter=",",
+        encoding="utf-8",
+        output_dir=output_dir,
+    )
+
+    assert created_dir == output_dir
+    assert total_rows == 5
+    assert [(batch_file.name, row_count) for batch_file, row_count in batch_details] == [
+        ("contacts_batch_001.csv", 3),
+        ("contacts_batch_002.csv", 2),
+    ]
