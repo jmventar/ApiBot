@@ -90,6 +90,32 @@ def write_csv_batches(
     return batch_details
 
 
+def build_csv_batches_from_rows(
+    csv_file: Path,
+    header: list[str],
+    rows: list[list[str]],
+    max_rows_per_batch: int = DEFAULT_MAX_ROWS_PER_CSV_BATCH,
+    output_dir: Path | None = None,
+    delimiter: str = ",",
+    output_encoding: str = "utf-8",
+) -> tuple[Path, int, list[tuple[Path, int]]]:
+    batch_sizes = get_batch_sizes(
+        len(rows),
+        suggest_batches(len(rows), max_rows_per_batch),
+    )
+    target_dir = output_dir or csv_file.parent / csv_file.stem
+    batch_details = write_csv_batches(
+        header=header,
+        rows=rows,
+        batch_sizes=batch_sizes,
+        output_dir=target_dir,
+        file_stem=csv_file.stem,
+        delimiter=delimiter,
+        output_encoding=output_encoding,
+    )
+    return target_dir, len(rows), batch_details
+
+
 def split_csv(
     csv_file: Path,
     batches: int,
@@ -130,18 +156,12 @@ def split_csv_by_max_rows(
         delimiter=delimiter,
         encoding=encoding,
     )
-    batch_sizes = get_batch_sizes(
-        len(rows),
-        suggest_batches(len(rows), max_rows_per_batch),
-    )
-    target_dir = output_dir or csv_file.parent / csv_file.stem
-    batch_details = write_csv_batches(
+    return build_csv_batches_from_rows(
+        csv_file=csv_file,
         header=header,
         rows=rows,
-        batch_sizes=batch_sizes,
-        output_dir=target_dir,
-        file_stem=csv_file.stem,
+        output_dir=output_dir,
+        max_rows_per_batch=max_rows_per_batch,
         delimiter=delimiter,
         output_encoding=output_encoding,
     )
-    return target_dir, len(rows), batch_details
