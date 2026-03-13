@@ -4,7 +4,7 @@ import csv
 import math
 from pathlib import Path
 
-DEFAULT_MAX_ROWS_PER_BATCH = 5000
+from constants import DEFAULT_MAX_ROWS_PER_CSV_BATCH
 
 
 def get_batch_sizes(total_rows: int, batches: int) -> list[int]:
@@ -23,21 +23,8 @@ def get_batch_sizes(total_rows: int, batches: int) -> list[int]:
     return [base_size + (1 if index < remainder else 0) for index in range(batches)]
 
 
-def get_batch_sizes_for_max_rows(
-    total_rows: int, max_rows_per_batch: int = DEFAULT_MAX_ROWS_PER_BATCH
-) -> list[int]:
-    if max_rows_per_batch <= 0:
-        raise ValueError("The maximum rows per batch must be greater than 0.")
-
-    if total_rows <= 0:
-        raise ValueError("The CSV file has no data rows to split.")
-
-    batches = math.ceil(total_rows / max_rows_per_batch)
-    return get_batch_sizes(total_rows, batches)
-
-
 def suggest_batches(
-    total_rows: int, max_rows_per_batch: int = DEFAULT_MAX_ROWS_PER_BATCH
+    total_rows: int, max_rows_per_batch: int = DEFAULT_MAX_ROWS_PER_CSV_BATCH
 ) -> int:
     if max_rows_per_batch <= 0:
         raise ValueError("The maximum rows per batch must be greater than 0.")
@@ -132,7 +119,7 @@ def split_csv(
 
 def split_csv_by_max_rows(
     csv_file: Path,
-    max_rows_per_batch: int = DEFAULT_MAX_ROWS_PER_BATCH,
+    max_rows_per_batch: int = DEFAULT_MAX_ROWS_PER_CSV_BATCH,
     delimiter: str = ",",
     encoding: str = "utf-8",
     output_dir: Path | None = None,
@@ -143,7 +130,10 @@ def split_csv_by_max_rows(
         delimiter=delimiter,
         encoding=encoding,
     )
-    batch_sizes = get_batch_sizes_for_max_rows(len(rows), max_rows_per_batch)
+    batch_sizes = get_batch_sizes(
+        len(rows),
+        suggest_batches(len(rows), max_rows_per_batch),
+    )
     target_dir = output_dir or csv_file.parent / csv_file.stem
     batch_details = write_csv_batches(
         header=header,

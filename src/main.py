@@ -8,7 +8,7 @@ from colorama import Fore, init
 from constants import (
     CSV_SOURCE,
     DATETIME_FORMAT,
-    DEFAULT_MAX_ROWS_PER_UPLOAD,
+    DEFAULT_MAX_ROWS_PER_CSV_BATCH,
     DEFAULT_UPLOAD_FIELD,
     JSON_ARRAY_SOURCE,
     JSON_SOURCE,
@@ -45,7 +45,7 @@ def parse_args(argv=None):
         "--max-rows-per-upload",
         type=int,
         required=False,
-        default=DEFAULT_MAX_ROWS_PER_UPLOAD,
+        default=DEFAULT_MAX_ROWS_PER_CSV_BATCH,
     )
     url_group.add_argument(
         "--upload-field",

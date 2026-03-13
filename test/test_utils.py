@@ -3,7 +3,7 @@ import json
 import pytest
 
 from src.utils.csv_batch_utils import (
-    get_batch_sizes_for_max_rows,
+    get_batch_sizes,
     load_csv_rows,
     split_csv,
     split_csv_by_max_rows,
@@ -105,8 +105,8 @@ def test_csv_parse_empty(tmp_path):
 
 # --- csv_batch_utils ---
 
-def test_get_batch_sizes_for_max_rows():
-    assert get_batch_sizes_for_max_rows(total_rows=5, max_rows_per_batch=2) == [2, 2, 1]
+def test_get_batch_sizes():
+    assert get_batch_sizes(total_rows=5, batches=3) == [2, 2, 1]
 
 
 def test_load_csv_rows_strips_utf8_bom_from_header(tmp_path):
