@@ -7,6 +7,7 @@ from src.utils.csv_batch_utils import (
     load_csv_rows,
     split_csv,
     split_csv_by_max_rows,
+    stream_csv_batches,
     suggest_batches,
 )
 from src.utils.json_utils import parse, store_jsonl_append, cleanup
@@ -187,3 +188,82 @@ def test_split_csv_with_explicit_batches_distributes_rows_evenly(tmp_path):
         ("contacts_batch_001.csv", 3),
         ("contacts_batch_002.csv", 2),
     ]
+
+
+# --- stream_csv_batches ---
+
+def test_stream_csv_batches_writes_batches_incrementally(tmp_path):
+    csv_file = tmp_path / "contacts.csv"
+    csv_file.write_text("id,name\n1,Alice\n2,Bob\n3,Carla\n", encoding="utf-8")
+    output_dir = tmp_path / "streaming_run"
+
+    created_dir, total_rows, batch_details = stream_csv_batches(
+        csv_file=csv_file,
+        max_rows_per_batch=2,
+        delimiter=",",
+        encoding="utf-8",
+        output_dir=output_dir,
+    )
+
+    assert created_dir == output_dir
+    assert total_rows == 3
+    assert [(batch_file.name, row_count) for batch_file, row_count in batch_details] == [
+        ("contacts_batch_001.csv", 2),
+        ("contacts_batch_002.csv", 1),
+    ]
+    assert output_dir.joinpath("contacts_batch_001.csv").read_text(encoding="utf-8") == (
+        "id,name\n1,Alice\n2,Bob\n"
+    )
+    assert output_dir.joinpath("contacts_batch_002.csv").read_text(encoding="utf-8") == (
+        "id,name\n3,Carla\n"
+    )
+
+
+def test_stream_csv_batches_strips_bom_from_header(tmp_path):
+    csv_file = tmp_path / "bom.csv"
+    csv_file.write_text("\ufeffid,name\n1,Alice\n", encoding="utf-8")
+    output_dir = tmp_path / "bom_run"
+
+    _, total_rows, batch_details = stream_csv_batches(
+        csv_file=csv_file,
+        max_rows_per_batch=10,
+        delimiter=",",
+        encoding="utf-8",
+        output_dir=output_dir,
+    )
+
+    assert total_rows == 1
+    header_line = output_dir.joinpath("bom_batch_001.csv").read_text(encoding="utf-8").splitlines()[0]
+    assert header_line == "id,name"
+
+
+def test_stream_csv_batches_rejects_empty_csv(tmp_path):
+    csv_file = tmp_path / "empty.csv"
+    csv_file.write_text("", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="empty"):
+        stream_csv_batches(csv_file, output_dir=tmp_path / "out")
+
+
+def test_stream_csv_batches_rejects_header_only_csv(tmp_path):
+    csv_file = tmp_path / "header_only.csv"
+    csv_file.write_text("id,name\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="no data rows"):
+        stream_csv_batches(csv_file, output_dir=tmp_path / "out")
+
+
+def test_stream_csv_batches_single_batch_when_rows_fit(tmp_path):
+    csv_file = tmp_path / "small.csv"
+    csv_file.write_text("a,b\n1,2\n3,4\n", encoding="utf-8")
+    output_dir = tmp_path / "single_batch_run"
+
+    created_dir, total_rows, batch_details = stream_csv_batches(
+        csv_file=csv_file,
+        max_rows_per_batch=100,
+        output_dir=output_dir,
+    )
+
+    assert total_rows == 2
+    assert len(batch_details) == 1
+    assert batch_details[0][1] == 2
