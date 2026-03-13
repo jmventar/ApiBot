@@ -12,7 +12,7 @@ from requests.exceptions import RequestException
 
 from api_bot.response_log import ResponseLog
 from constants import CONTENT_TYPE_JSON, JSON_ARRAY_SOURCE
-from utils.csv_batch_utils import split_csv_by_max_rows
+from utils.csv_batch_utils import load_csv_rows, split_csv_by_max_rows, suggest_batches
 from utils.json_utils import store_jsonl_append
 
 
@@ -136,6 +136,15 @@ class ApiBot:
     def _run_upload_csv(self, method: str, headers, delay: float):
         csv_file = pathlib.Path(self.args.file)
         output_dir = self._prepare_upload_output_dir(csv_file)
+        _, rows = load_csv_rows(
+            csv_file=csv_file,
+            delimiter=self.args.delimiter,
+            encoding=self.args.encoding,
+        )
+        total_rows = len(rows)
+        total_batches = suggest_batches(total_rows, self.args.max_rows_per_upload)
+        logging.info(f"CSV rows to split: {total_rows}")
+        logging.info(f"CSV upload batches to create: {total_batches}")
         _, _, batch_details = split_csv_by_max_rows(
             csv_file=csv_file,
             max_rows_per_batch=self.args.max_rows_per_upload,

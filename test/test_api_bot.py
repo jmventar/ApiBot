@@ -576,6 +576,42 @@ def test_run_upload_csv_splits_batches_and_posts_multipart_files(
         "id,name\n3,Carla\n"
     )
 
+
+@patch("src.api_bot.api_bot.requests.request")
+def test_run_upload_csv_logs_rows_and_batch_count_before_split(
+    mock_request, tmp_path
+):
+    csv_file = tmp_path / "contacts.csv"
+    csv_file.write_text("id,name\n1,Alice\n2,Bob\n3,Carla\n", encoding="utf-8")
+
+    args = MockArgs(
+        source="json",
+        method="POST",
+        url="http://example.com/upload-csv",
+        file=str(csv_file),
+        upload_csv=True,
+        max_rows_per_upload=2,
+    )
+    bot = ApiBot(args, [str(csv_file)], [])
+
+    mock_response = MagicMock()
+    mock_response.status_code = 202
+    mock_response.headers = {"content-type": "text/plain"}
+    mock_response.content = b"accepted"
+    mock_request.return_value = mock_response
+
+    batch_dir = tmp_path / "upload_run"
+    with patch("src.api_bot.api_bot.tempfile.mkdtemp", return_value=str(batch_dir)):
+        with patch("src.api_bot.api_bot.logging.info") as mock_logging:
+            with patch.object(ApiBot, "log_response"):
+                with patch.object(bot, "_persist_to_storage"):
+                    bot.run()
+
+    logged_messages = [call.args[0] for call in mock_logging.call_args_list]
+    assert "CSV rows to split: 3" in logged_messages
+    assert "CSV upload batches to create: 2" in logged_messages
+
+
 @patch("src.api_bot.api_bot.requests.request")
 def test_run_calls_persist_periodically(mock_request, tmp_path):
     elements = [f"elem{i}" for i in range(55)]
