@@ -60,6 +60,7 @@ Results and logs are written to `data/` (auto-created) as timestamped JSONL file
 ## Coding conventions
 
 - **Python 3.13** (CI matrix), using `match`/`case` syntax.
+- When a Python command must be run in this sandbox, create and use a project-local `.venv`; do not execute against the system `python` directly.
 - **`argparse`** for CLI argument parsing.
 - **`colorama`** for colored terminal output via `Fore` and `Style`.
 - **`logging`** module at INFO level for all operational messages.
@@ -80,9 +81,11 @@ Test dependencies: `pytest`
 
 Run tests with:
 
-```bash
-PYTHONPATH=src python -m pytest test/
+```text
+PYTHONPATH=src <.venv-python> -m pytest test/
 ```
+
+Create `.venv` first if it does not exist. Replace `<.venv-python>` with the Python executable inside the project's `.venv` for the current system.
 
 Tests live in `test/` alongside sample data in `test/data/`. Storage tests use pytest's `tmp_path` fixture for file isolation and automatic cleanup.
 
