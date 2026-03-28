@@ -131,6 +131,60 @@ class ApiBot:
             return {}
         return {"Authorization": f"Bearer {self.args.token}"}
 
+    def _get_response_byte_limit(self):
+        return self.args.max_response_bytes
+
+    def _read_response_body(self, response):
+        max_bytes = self._get_response_byte_limit()
+        iter_content = getattr(response, "iter_content", None)
+
+        if not callable(iter_content):
+            raw_content = getattr(response, "content", b"") or b""
+            if isinstance(raw_content, str):
+                raw_content = raw_content.encode("utf-8", errors="replace")
+            truncated = len(raw_content) > max_bytes
+            close = getattr(response, "close", None)
+            if callable(close):
+                close()
+            return raw_content[:max_bytes], truncated
+
+        chunks = []
+        bytes_read = 0
+        truncated = False
+
+        try:
+            iterator = iter_content(chunk_size=8192)
+            for chunk in iterator:
+                if not chunk:
+                    continue
+
+                remaining = max_bytes - bytes_read
+                if remaining <= 0:
+                    truncated = True
+                    break
+
+                if len(chunk) <= remaining:
+                    chunks.append(chunk)
+                    bytes_read += len(chunk)
+                    continue
+
+                chunks.append(chunk[:remaining])
+                bytes_read += remaining
+                truncated = True
+                break
+        except TypeError:
+            raw_content = getattr(response, "content", b"") or b""
+            if isinstance(raw_content, str):
+                raw_content = raw_content.encode("utf-8", errors="replace")
+            truncated = len(raw_content) > max_bytes
+            return raw_content[:max_bytes], truncated
+        finally:
+            close = getattr(response, "close", None)
+            if callable(close):
+                close()
+
+        return b"".join(chunks), truncated
+
     def _prepare_upload_output_dir(self, csv_file: pathlib.Path) -> pathlib.Path:
         data_dir = pathlib.Path().resolve() / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -178,7 +232,8 @@ class ApiBot:
                         session,
                         method,
                         self.args.url,                    
-                        files=files
+                        files=files,
+                        timeout=self.args.timeout,
                     )
 
                 if response is not None:
@@ -230,7 +285,11 @@ class ApiBot:
                     current_url = self.replace_elements(elem)
                     json_data = self.replace_payload_elements(elem)
                     response = self.execute(
-                        session, method, current_url, json_data
+                        session,
+                        method,
+                        current_url,
+                        json_data,
+                        timeout=self.args.timeout,
                     )
 
                     if response is not None:
@@ -281,12 +340,8 @@ class ApiBot:
     def log_response(self, method, url, count, response):
         current_date_and_time = datetime.now()
         result_content = response.headers.get("content-type")
-        result_length = response.headers.get("content-length")
-
-        if result_length is None:
-            result_length = len(response.content) if response.content is not None else 0
-        else:
-            result_length = int(result_length)
+        response_body, is_truncated = self._read_response_body(response)
+        result_length = len(response_body)
 
         status_color = self.get_status_color(response.status_code)
         method_color = self.get_method_color(method)
@@ -294,20 +349,41 @@ class ApiBot:
             f"{Fore.LIGHTBLACK_EX} {count} {current_date_and_time} {Fore.RESET} "
             f"{method_color}{method}{Style.RESET_ALL} {url} : "
             f"{status_color}{response.status_code}{Style.RESET_ALL} "
-            f"content {result_content} {result_length} "
+            f"content {result_content} {result_length}"
+            f"{' [truncated]' if is_truncated else ''} "
         )
 
-        is_json_response: bool = False
-        if result_content is not None and CONTENT_TYPE_JSON in result_content:
-            response_json = response.json()
-            logging.info(f"{response_json}")
-            if isinstance(response_json, list):
-                self.response_data.extend(response_json)
+        response_data = None
+        content_type = result_content.lower() if result_content is not None else ""
+        if result_length > 0:
+            response_text = response_body.decode(
+                response.encoding or "utf-8",
+                errors="replace",
+            )
+            if CONTENT_TYPE_JSON in content_type and not is_truncated:
+                try:
+                    response_data = json.loads(response_text)
+                    logging.info(f"{response_data}")
+                    if isinstance(response_data, list):
+                        self.response_data.extend(response_data)
+                    else:
+                        self.response_data.append(response_data)
+                except json.JSONDecodeError:
+                    response_data = response_text
+                    logging.info(f"{response_data}")
             else:
-                self.response_data.append(response_json)
-            is_json_response = True
+                response_data = response_text
+                logging.info(f"{response_data}")
 
-        log_data = ResponseLog(response, result_length, is_json_response)
+        log_data = ResponseLog(
+            method=method,
+            url=url,
+            status_code=response.status_code,
+            content_type=result_content,
+            content_length=result_length,
+            data=response_data,
+            truncated=is_truncated,
+        )
         self.response_log.append(log_data.to_json())
 
     @staticmethod
@@ -319,7 +395,7 @@ class ApiBot:
         )
 
     @staticmethod
-    def execute(session, method: str, url: str, json_data=None, files=None):
+    def execute(session, method: str, url: str, json_data=None, files=None, timeout=None):
         try:
             return session.request(
                 method,
@@ -328,6 +404,8 @@ class ApiBot:
                 json=json_data,
                 data=None, # NOT supported option
                 files=files,
+                timeout=timeout,
+                stream=True,
             )
         except RequestException as e:
             logging.error(f"Request failed: {e}")

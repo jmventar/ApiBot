@@ -6,7 +6,7 @@ Simple project to run a collection of requests, similar to POSTMAN run collectio
 
 `-f` parameter is mandatory, with an input file (json object as default, also accepts json arrays and csv).
 
-`usage: main.py [-h] --file FILE [--clean] [--upload-csv] [--source {json,json_array,csv}] [--dry] [--method METHOD] [--payload JSON_PAYLOAD] [--avoid-storage] [--url URL] [--token TOKEN] [--delay DELAY] [--max-rows-per-upload MAX_ROWS_PER_UPLOAD] [--upload-field UPLOAD_FIELD] [--delimiter DELIMITER] [--encoding ENCODING]`
+`usage: main.py [-h] --file FILE [--clean] [--upload-csv] [--source {json,json_array,csv}] [--dry] [--method METHOD] [--payload JSON_PAYLOAD] [--avoid-storage] [--url URL] [--token TOKEN] [--delay DELAY] [--timeout TIMEOUT] [--max-response-bytes MAX_RESPONSE_BYTES] [--max-rows-per-upload MAX_ROWS_PER_UPLOAD] [--upload-field UPLOAD_FIELD] [--delimiter DELIMITER] [--encoding ENCODING]`
 
 ##### Options
 
@@ -22,6 +22,8 @@ Simple project to run a collection of requests, similar to POSTMAN run collectio
 - `--avoid-storage` don't create `data/result_<timestamp>_source-<source>.jsonl` results file and `data/log_<timestamp>_source-<source>.jsonl` log file. **false by default.** Logs and results use JSONL format (one JSON object per line) and are persisted incrementally every 50 requests and at the end of the run, appending only new records each time.
 - `--token TOKEN, -t TOKEN` bearer token if needed. If omitted, ApiBot falls back to `APIBOT_TOKEN`.
 - `--delay DELAY, -d DELAY` delay between requests in seconds, accepts decimal values
+- `--timeout` request timeout in seconds for each HTTP call, default **90.0**
+- `--max-response-bytes` maximum number of response bytes ApiBot will read, log, and store per request, default **1048576**
 - `--max-rows-per-upload` maximum data rows per uploaded batch file, default **5000**
 - `--upload-field` multipart form-data field used for the uploaded file, default **csvFile**
 - `--delimiter` CSV delimiter used when reading and splitting upload CSVs, default **,**
@@ -33,6 +35,7 @@ Safer token usage:
 
 - Set `APIBOT_TOKEN` in your shell instead of passing a token on the command line.
 - `--token` still works and overrides the environment variable when both are present.
+- Large responses are truncated at `--max-response-bytes` so ApiBot does not buffer unlimited response bodies.
 
 #### Placeholder replacement
 

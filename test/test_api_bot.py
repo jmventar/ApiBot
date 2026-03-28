@@ -27,6 +27,8 @@ class MockArgs:
         max_rows_per_upload=5000,
         encoding="utf-8",
         delimiter=",",
+        timeout=90.0,
+        max_response_bytes=1048576,
     ):
         self.url = url
         self.source = source
@@ -43,6 +45,8 @@ class MockArgs:
         self.max_rows_per_upload = max_rows_per_upload
         self.encoding = encoding
         self.delimiter = delimiter
+        self.timeout = timeout
+        self.max_response_bytes = max_response_bytes
 
 
 def _read_jsonl(filename):
@@ -72,6 +76,26 @@ def test_parse_args_upload_csv_defaults_to_post():
     assert args.upload_field == "csvFile"
     assert args.encoding == "utf-8"
     assert args.delimiter == ","
+    assert args.timeout == 90.0
+    assert args.max_response_bytes == 1048576
+
+
+def test_parse_args_timeout_and_response_limit():
+    args = parse_args(
+        [
+            "--file",
+            "contacts.csv",
+            "--url",
+            "https://example.com/api/v3/upload-csv",
+            "--timeout",
+            "12.5",
+            "--max-response-bytes",
+            "2048",
+        ]
+    )
+
+    assert args.timeout == 12.5
+    assert args.max_response_bytes == 2048
 
 
 def test_parse_args_uses_apibot_token_when_cli_token_missing(monkeypatch):
@@ -385,6 +409,20 @@ def test_validate_args_upload_csv_requires_known_encoding():
         validate_args(args, [])
 
 
+def test_validate_args_rejects_non_positive_timeout():
+    args = MockArgs(timeout=0)
+
+    with pytest.raises(SystemExit):
+        validate_args(args, ["id"])
+
+
+def test_validate_args_rejects_non_positive_response_limit():
+    args = MockArgs(max_response_bytes=0)
+
+    with pytest.raises(SystemExit):
+        validate_args(args, ["id"])
+
+
 # ============================================================
 # register_success / register_failure / _format_failures_summary
 # ============================================================
@@ -510,12 +548,29 @@ def test_log_response_appends_json_object_as_single_result():
     response = MagicMock()
     response.status_code = 200
     response.headers = {"content-type": "application/json"}
-    response.json.return_value = {"key": "value"}
     response.content = b'{"key":"value"}'
+    response.encoding = "utf-8"
+    response.iter_content.return_value = [b'{"key":"value"}']
 
     bot.log_response("GET", "http://example.com/items/1", 1, response)
 
     assert bot.response_data == [{"key": "value"}]
+
+
+def test_log_response_truncates_oversized_body():
+    bot = ApiBot(MockArgs(max_response_bytes=4), [], ["0"])
+
+    response = MagicMock()
+    response.status_code = 200
+    response.headers = {"content-type": "text/plain"}
+    response.encoding = "utf-8"
+    response.iter_content.return_value = [b"abcdefgh"]
+
+    bot.log_response("GET", "http://example.com/items/1", 1, response)
+
+    assert bot.response_log[0]["content-length"] == 4
+    assert bot.response_log[0]["content-truncated"] is True
+    assert bot.response_log[0]["data"] == "abcd"
 
 
 # ============================================================
@@ -540,6 +595,7 @@ def test_run_passes_payload_to_execute():
 
     assert mock_execute.call_args_list[0].args[3] == {"id": "1", "name": "one"}
     assert mock_execute.call_args_list[1].args[3] == {"id": "2", "name": "two"}
+    assert mock_execute.call_args_list[0].kwargs["timeout"] == 90.0
 
 
 def test_run_passes_none_when_no_payload():
@@ -558,6 +614,7 @@ def test_run_passes_none_when_no_payload():
                 bot.run()
 
     assert mock_execute.call_args_list[0].args[3] is None
+    assert mock_execute.call_args_list[0].kwargs["timeout"] == 90.0
 
 
 @patch("src.api_bot.api_bot.requests.Session")
@@ -601,6 +658,8 @@ def test_run_upload_csv_splits_batches_and_posts_multipart_files(
     assert first_call.args == ("POST", "http://example.com/upload-csv")
     assert first_call.kwargs["headers"] == {"Authorization": "Bearer test-token"}
     assert first_call.kwargs.get("data") in (None, {})
+    assert first_call.kwargs["timeout"] == 90.0
+    assert first_call.kwargs["stream"] is True
     assert first_call.kwargs["files"][0][0] == "csvFile"
     assert first_call.kwargs["files"][0][1][0] == "contacts_batch_001.csv"
     assert first_call.kwargs["files"][0][1][2] == "text/csv"
@@ -616,10 +675,7 @@ def test_run_upload_csv_splits_batches_and_posts_multipart_files(
     )
 
 
-@patch("src.api_bot.api_bot.requests.request")
-def test_run_upload_csv_logs_rows_and_batch_count_before_split(
-    mock_request, tmp_path
-):
+def test_run_upload_csv_logs_rows_and_batch_count_before_split(tmp_path):
     csv_file = tmp_path / "contacts.csv"
     csv_file.write_text("id,name\n1,Alice\n2,Bob\n3,Carla\n", encoding="utf-8")
 
@@ -637,22 +693,21 @@ def test_run_upload_csv_logs_rows_and_batch_count_before_split(
     mock_response.status_code = 202
     mock_response.headers = {"content-type": "text/plain"}
     mock_response.content = b"accepted"
-    mock_request.return_value = mock_response
 
     batch_dir = tmp_path / "upload_run"
     with patch("src.api_bot.api_bot.tempfile.mkdtemp", return_value=str(batch_dir)):
         with patch("src.api_bot.api_bot.logging.info") as mock_logging:
             with patch.object(ApiBot, "log_response"):
                 with patch.object(bot, "_persist_to_storage"):
-                    bot.run()
+                    with patch.object(ApiBot, "execute", return_value=mock_response):
+                        bot.run()
 
     logged_messages = [call.args[0] for call in mock_logging.call_args_list]
     assert "CSV rows to split: 3" in logged_messages
     assert "CSV upload batches to create: 2" in logged_messages
 
 
-@patch("src.api_bot.api_bot.requests.request")
-def test_run_upload_csv_loads_source_rows_once(mock_request, tmp_path):
+def test_run_upload_csv_loads_source_rows_once(tmp_path):
     csv_file = tmp_path / "contacts.csv"
     csv_file.write_text("id,name\n1,Alice\n2,Bob\n3,Carla\n", encoding="utf-8")
 
@@ -670,7 +725,6 @@ def test_run_upload_csv_loads_source_rows_once(mock_request, tmp_path):
     mock_response.status_code = 202
     mock_response.headers = {"content-type": "text/plain"}
     mock_response.content = b"accepted"
-    mock_request.return_value = mock_response
 
     batch_dir = tmp_path / "upload_run"
     with patch("src.api_bot.api_bot.tempfile.mkdtemp", return_value=str(batch_dir)):
@@ -679,7 +733,8 @@ def test_run_upload_csv_loads_source_rows_once(mock_request, tmp_path):
         ) as mock_path_open:
             with patch.object(ApiBot, "log_response"):
                 with patch.object(bot, "_persist_to_storage"):
-                    bot.run()
+                    with patch.object(ApiBot, "execute", return_value=mock_response):
+                        bot.run()
 
     source_read_calls = [
         call
@@ -690,24 +745,24 @@ def test_run_upload_csv_loads_source_rows_once(mock_request, tmp_path):
     assert len(source_read_calls) == 1
 
 
-@patch("src.api_bot.api_bot.requests.request")
-def test_run_calls_persist_periodically(mock_request, tmp_path):
+def test_run_calls_persist_periodically(tmp_path):
     elements = [f"elem{i}" for i in range(55)]
     args = MockArgs(url="http://example.com/{{0}}")
 
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.headers = {"content-type": "application/json"}
-    mock_response.json.return_value = {"key": "value"}
     mock_response.content = b'{"key": "value"}'
-    mock_request.return_value = mock_response
+    mock_response.encoding = "utf-8"
+    mock_response.iter_content.return_value = [b'{"key": "value"}']
 
     log_file = str(tmp_path / "periodic_log.jsonl")
     result_file = str(tmp_path / "periodic_result.jsonl")
     bot = ApiBot(args, elements, ["0"], log_filename=log_file, result_filename=result_file)
 
     with patch.object(bot, "_persist_to_storage") as mock_persist:
-        bot.run()
+        with patch.object(ApiBot, "execute", return_value=mock_response):
+            bot.run()
 
         # Should be called once at count 50 and once at the end
         assert mock_persist.call_count == 2

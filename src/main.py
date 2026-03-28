@@ -41,6 +41,13 @@ def parse_args(argv=None):
     url_group.add_argument("--url", "-u", type=str, required=False)
     url_group.add_argument("--token", "-t", type=str, required=False)
     url_group.add_argument("--delay", "-d", type=float, required=False, default=0)
+    url_group.add_argument("--timeout", type=float, required=False, default=90.0)
+    url_group.add_argument(
+        "--max-response-bytes",
+        type=int,
+        required=False,
+        default=1048576,
+    )
     url_group.add_argument("--avoid-storage", action="store_true", required=False)
     url_group.add_argument(
         "--max-rows-per-upload",
@@ -66,6 +73,18 @@ def parse_args(argv=None):
 
 
 def validate_args(args, placeholders):
+    if args.timeout <= 0:
+        logging.error(
+            f"Invalid arguments provided, {Fore.RED}--timeout{Fore.RESET} must be greater than 0."
+        )
+        exit(1)
+
+    if args.max_response_bytes <= 0:
+        logging.error(
+            f"Invalid arguments provided, {Fore.RED}--max-response-bytes{Fore.RESET} must be greater than 0."
+        )
+        exit(1)
+
     if args.upload_csv:
         if pathlib.Path(args.file).suffix.lower() != ".csv":
             logging.error(
