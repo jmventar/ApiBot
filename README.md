@@ -39,9 +39,9 @@ URL placeholders use the `{{key}}` pattern and are resolved from the current inp
 
 #### Cleaner
 
-`--clean` deduplicates scalar values before execution.
+`--clean` deduplicates values before execution.
 
-- With JSON object input, it extracts the single value from each object and returns unique values
+- With JSON object input, it collects values from every field across all objects and returns the unique values. This mode is most predictable when each object contains a single scalar field.
 - With `json_array` input, it flattens nested arrays and returns unique values
 - This is typically paired with a single URL or payload placeholder
 
