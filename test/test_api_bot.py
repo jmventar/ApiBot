@@ -74,6 +74,38 @@ def test_parse_args_upload_csv_defaults_to_post():
     assert args.delimiter == ","
 
 
+def test_parse_args_uses_apibot_token_when_cli_token_missing(monkeypatch):
+    monkeypatch.setenv("APIBOT_TOKEN", "env-token")
+
+    args = parse_args(
+        [
+            "--file",
+            "contacts.csv",
+            "--url",
+            "https://example.com/api/v3/upload-csv",
+        ]
+    )
+
+    assert args.token == "env-token"
+
+
+def test_parse_args_prefers_cli_token_over_env(monkeypatch):
+    monkeypatch.setenv("APIBOT_TOKEN", "env-token")
+
+    args = parse_args(
+        [
+            "--file",
+            "contacts.csv",
+            "--url",
+            "https://example.com/api/v3/upload-csv",
+            "--token",
+            "cli-token",
+        ]
+    )
+
+    assert args.token == "cli-token"
+
+
 # ============================================================
 # replace_elements
 # ============================================================

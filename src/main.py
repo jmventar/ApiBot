@@ -2,6 +2,7 @@ import argparse
 import codecs
 from datetime import datetime
 import logging
+import os
 import pathlib
 import re
 from colorama import Fore, init
@@ -59,6 +60,8 @@ def parse_args(argv=None):
     args = parser.parse_args(argv)
     if args.method is None:
         args.method = "POST" if args.upload_csv else "GET"
+    if args.token is None:
+        args.token = os.getenv("APIBOT_TOKEN") or None
     return args
 
 

@@ -20,7 +20,7 @@ Simple project to run a collection of requests, similar to POSTMAN run collectio
 - `--method METHOD, -m METHOD` request method, default **GET** for normal runs and **POST** for `--upload-csv`
 - `--payload JSON_PAYLOAD, -p JSON_PAYLOAD` JSON payload template string. Supports placeholder substitution with `{{key}}`.
 - `--avoid-storage` don't create `data/result_<timestamp>_source-<source>.jsonl` results file and `data/log_<timestamp>_source-<source>.jsonl` log file. **false by default.** Logs and results use JSONL format (one JSON object per line) and are persisted incrementally every 50 requests and at the end of the run, appending only new records each time.
-- `--token TOKEN, -t TOKEN` bearer token if needed
+- `--token TOKEN, -t TOKEN` bearer token if needed. If omitted, ApiBot falls back to `APIBOT_TOKEN`.
 - `--delay DELAY, -d DELAY` delay between requests in seconds, accepts decimal values
 - `--max-rows-per-upload` maximum data rows per uploaded batch file, default **5000**
 - `--upload-field` multipart form-data field used for the uploaded file, default **csvFile**
@@ -28,6 +28,11 @@ Simple project to run a collection of requests, similar to POSTMAN run collectio
 - `--encoding` file encoding used when reading and splitting upload CSVs, default **utf-8**
 
 To avoid make request, use --dry for dry run or don't specify -u URL.
+
+Safer token usage:
+
+- Set `APIBOT_TOKEN` in your shell instead of passing a token on the command line.
+- `--token` still works and overrides the environment variable when both are present.
 
 #### Placeholder replacement
 
@@ -74,15 +79,17 @@ One example for each supported action:
 - Replace a `{{0}}` placeholder from a cleaned JSON array source:
   `python ./src/main.py -s json_array --clean -f ./test/data/json_arrays.json -u "https://jsonplaceholder.typicode.com/posts/{{0}}"`
 - Replace placeholders from a JSON object source and send a JSON payload:
-  `python ./src/main.py -f ./test/data/multiple_replace.json -m POST -u "https://jsonplaceholder.typicode.com/posts/{{id}}" -p "{\"title\":\"{{name}}\",\"body\":\"{{map}}\",\"userId\":\"{{map_id}}\"}" -t 123456 -d 2.5`
+  `python ./src/main.py -f ./test/data/multiple_replace.json -m POST -u "https://jsonplaceholder.typicode.com/posts/{{id}}" -p "{\"title\":\"{{name}}\",\"body\":\"{{map}}\",\"userId\":\"{{map_id}}\"}" -d 2.5`
+- Use an environment variable for the bearer token:
+  `$env:APIBOT_TOKEN='123456'; python ./src/main.py -f ./test/data/multiple_replace.json -m POST -u "https://jsonplaceholder.typicode.com/posts/{{id}}" -p "{\"title\":\"{{name}}\",\"body\":\"{{map}}\",\"userId\":\"{{map_id}}\"}" -d 2.5`
 - Replace a single placeholder from CSV:
-  `python ./src/main.py -f ./test/data/single_replace.csv -s csv -m GET -u "https://jsonplaceholder.typicode.com/posts/{{post_num}}" -t 123456`
+  `python ./src/main.py -f ./test/data/single_replace.csv -s csv -m GET -u "https://jsonplaceholder.typicode.com/posts/{{post_num}}"`
 - Replace multiple placeholders from CSV:
-  `python ./src/main.py -f ./test/data/multiple_replace.csv -s csv -m GET -u "https://jsonplaceholder.typicode.com/posts/1?param1={{replace_1}}&param2={{replace_2}}&param3={{replace_3}}" -t 123456`
+  `python ./src/main.py -f ./test/data/multiple_replace.csv -s csv -m GET -u "https://jsonplaceholder.typicode.com/posts/1?param1={{replace_1}}&param2={{replace_2}}&param3={{replace_3}}"`
 - Replace CSV placeholders inside a JSON payload:
-  `python ./src/main.py -f ./test/data/multiple_replace.csv -s csv -m POST -u "https://jsonplaceholder.typicode.com/posts/{{replace_1}}" -p "{\"title\":\"{{replace_1}}\",\"body\":\"{{replace_2}}\",\"userId\":\"{{replace_3}}\"}" -t 123456`
+  `python ./src/main.py -f ./test/data/multiple_replace.csv -s csv -m POST -u "https://jsonplaceholder.typicode.com/posts/{{replace_1}}" -p "{\"title\":\"{{replace_1}}\",\"body\":\"{{replace_2}}\",\"userId\":\"{{replace_3}}\"}"`
 - Upload a CSV file in batches:
-  `python ./src/main.py --upload-csv -f ./test/data/multiple_replace.csv -u "https://www.example.es/api/v3/upload-csv" -t 123456 --max-rows-per-upload 5000`
+  `python ./src/main.py --upload-csv -f ./test/data/multiple_replace.csv -u "https://www.example.es/api/v3/upload-csv" --max-rows-per-upload 5000`
 
 #### AI coding agents
 
