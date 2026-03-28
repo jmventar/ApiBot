@@ -5,6 +5,7 @@ import pathlib
 import tempfile
 import time
 from datetime import datetime
+from urllib.parse import quote
 
 import requests
 from colorama import Fore, Style
@@ -38,14 +39,24 @@ class ApiBot:
         current_url = self.args.url.replace(r"{{", "#").replace(r"}}", "#")
 
         if self.args.source == JSON_ARRAY_SOURCE:
-            current_url = current_url.replace("#0#", str(value))
+            current_url = current_url.replace("#0#", self._encode_url_value(value))
         elif self.args.clean is True:
-            current_url = current_url.replace(f"#{self.placeholders[0]}#", str(value))
+            current_url = current_url.replace(
+                f"#{self.placeholders[0]}#",
+                self._encode_url_value(value),
+            )
         else:
             for p in self.placeholders:
-                current_url = current_url.replace(f"#{p}#", str(value[p]))
+                current_url = current_url.replace(
+                    f"#{p}#",
+                    self._encode_url_value(value[p]),
+                )
 
         return current_url
+
+    @staticmethod
+    def _encode_url_value(value):
+        return quote(str(value), safe="")
 
     def replace_payload_elements(self, value):
         if not self.args.payload:

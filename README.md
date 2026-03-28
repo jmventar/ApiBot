@@ -40,6 +40,7 @@ Safer token usage:
 #### Placeholder replacement
 
 URL placeholders use the `{{key}}` pattern and are resolved from the current input row.
+Placeholder values inserted into URLs are percent-encoded before substitution so reserved characters do not change the request target.
 
 - **JSON**: each placeholder maps to a property in the current object
 - **CSV**: each placeholder maps to a column header in the current row

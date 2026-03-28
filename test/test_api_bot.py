@@ -177,11 +177,29 @@ def test_replace_elements_multiple_placeholders():
     assert bot.replace_elements(value) == "http://example.com/posts/1/Downtown/CritCity"
 
 
+def test_replace_elements_multiple_placeholders_are_url_encoded():
+    args = MockArgs(url="http://example.com/posts/{{id}}/{{name}}?map={{map}}", source="json")
+    bot = ApiBot(args, [], ["id", "name", "map"])
+    value = {"id": "A B", "name": "north/south", "map": "A&B?x=1"}
+    assert (
+        bot.replace_elements(value)
+        == "http://example.com/posts/A%20B/north%2Fsouth?map=A%26B%3Fx%3D1"
+    )
+
+
 def test_replace_elements_csv_multiple_placeholders():
     args = MockArgs(url="http://example.com/q?a={{r1}}&b={{r2}}&c={{r3}}", source="csv")
     bot = ApiBot(args, [], ["r1", "r2", "r3"])
     value = {"r1": "x", "r2": "y", "r3": "z"}
     assert bot.replace_elements(value) == "http://example.com/q?a=x&b=y&c=z"
+
+
+def test_replace_elements_json_array_encodes_reserved_characters():
+    args = MockArgs(url="http://example.com/items/{{0}}", source="json_array")
+    bot = ApiBot(args, [], ["0"])
+    assert bot.replace_elements("alpha/beta gamma") == (
+        "http://example.com/items/alpha%2Fbeta%20gamma"
+    )
 
 
 # ============================================================
