@@ -4,8 +4,6 @@ Simple project to run a collection of requests, similar to POSTMAN run collectio
 
 ### Usage
 
-Check `.vscode/launch.json` for test runs using **Visual Studio Code**
-
 `-f` parameter is mandatory, with an input file (json object as default, also accepts json arrays and csv).
 
 `usage: main.py [-h] --file FILE [--clean] [--upload-csv] [--source {json,json_array,csv}] [--dry] [--method METHOD] [--payload JSON_PAYLOAD] [--avoid-storage] [--url URL] [--token TOKEN] [--delay DELAY] [--max-rows-per-upload MAX_ROWS_PER_UPLOAD] [--upload-field UPLOAD_FIELD] [--delimiter DELIMITER] [--encoding ENCODING]`
@@ -15,7 +13,7 @@ Check `.vscode/launch.json` for test runs using **Visual Studio Code**
 - `-h, --help` show this help message and exit
 - `--file FILE, -f FILE` source data file, **mandatory**
 - `--url URL, -u URL` url to make the requests
-- `--clean` check json array cleaner section
+- `--clean` check cleaner section
 - `--source {json, json_array, csv}, -s {json, json_array, csv}` json is default format for input, default **json**
 - `--dry` dry run, run without executing requests
 - `--upload-csv` split the CSV file into batch files and upload them sequentially as multipart form-data
@@ -29,54 +27,62 @@ Check `.vscode/launch.json` for test runs using **Visual Studio Code**
 - `--delimiter` CSV delimiter used when reading and splitting upload CSVs, default **,**
 - `--encoding` file encoding used when reading and splitting upload CSVs, default **utf-8**
 
-To avoid make request, use --dry for dry run or don't specify -u URL
+To avoid make request, use --dry for dry run or don't specify -u URL.
 
-#### Array cleaner
+#### Placeholder replacement
 
-Cleanup multiple response arrays in a single set without duplicates
+URL placeholders use the `{{key}}` pattern and are resolved from the current input row.
 
-`python ./src/main.py --clean -f ./test/data/single_replace.json`
+- **JSON**: each placeholder maps to a property in the current object
+- **CSV**: each placeholder maps to a column header in the current row
+- **JSON arrays**: use `{{0}}` as the placeholder value
 
-#### Replacer
+#### Cleaner
 
-Url replacer replaces specific parts of the url with provided file values.
-It will try to find json property and replace in the url.
-Same for CSV with headers.
+`--clean` deduplicates values before execution.
 
-Special case is for json arrays, where a `{{0}}` needs to be specified in url. This specific case is used to clean duplicated values and converts the array into python set. Check `ApiBot JSON single replace arrays` and `ApiBot JSON single call` examples on `.vscode/launch.json`
+- With JSON object input, it collects values from every field across all objects and returns the unique values. This mode is most predictable when each object contains a single scalar field.
+- With `json_array` input, it flattens nested arrays and returns unique values
+- This is typically paired with a single URL or payload placeholder
 
-#### Payload replacer
+#### Payload replacement
 
-Payload placeholders are auto-detected from brackets in `--payload` (same `{{key}}` style used in URLs).
+`--payload` supports the same placeholder syntax used by URLs.
 
-- **JSON/CSV**: each `{{key}}` maps to a property/column in the current row.
-- **JSON arrays**: use `{{0}}` as the placeholder.
-- The rendered payload is parsed with JSON before the request is sent.
-- If no payload is provided, requests are sent with no JSON body.
+- **JSON/CSV** payload placeholders map to object properties or CSV headers
+- **JSON arrays** use `{{0}}`
+- The rendered payload is parsed as JSON before the request is sent
 
 #### CSV upload mode
 
-`--upload-csv` treats `--file` as the CSV file to upload instead of row data for placeholder replacement.
+`--upload-csv` switches the tool from row-based placeholder replacement to batch file upload mode.
 
-- Upload mode accepts static URLs, so `--url` does not need `{{...}}` placeholders.
-- Upload mode uses a fixed upload endpoint and does not replace URL placeholders.
-- The source CSV is always split before upload.
-- Each batch contains up to `5000` data rows by default. Override this with `--max-rows-per-upload`.
-- Each generated batch is uploaded sequentially as multipart form-data using the `csvFile` field by default, or a custom field from `--upload-field`.
-- All batch requests use a single HTTP session (connection pooling) for better performance on large uploads.
-- `--source` and `--payload` continue to apply to the existing placeholder-based request flow; upload mode is a separate path.
+- `--file` is treated as the CSV file to upload
+- `--url` must be static and cannot contain placeholders
+- The file is split into batch CSV files before upload
+- `--max-rows-per-upload` defaults to `5000`
+- `--upload-field` defaults to `csvFile`
 
-#### Sample requests
+#### Examples
 
-Sample launch GET requests
+One example for each supported action:
 
-`python ./src/main.py --clean -f ./test/data/single_replace.json -m GET -u https://jsonplaceholder.typicode.com/posts/{{post_num}} -t 123456 -d 2.5`
-
-`python ./src/main.py -f ./test/data/multiple_replace.csv -s csv -m GET -u "https://jsonplaceholder.typicode.com/posts/{{id}}/{{name}}/{{map_id}}/{{map}}" -t 123456`
-
-`python ./src/main.py -f ./test/data/multiple_replace.csv -s csv -m POST -u "https://example.com/items/{{id}}" -p "{\"id\":\"{{id}}\",\"name\":\"{{name}}\"}" -t 123456`
-
-`python ./src/main.py --upload-csv -f ./test/data/multiple_replace.csv -u "https://www.example.es/api/v3/upload-csv" -t 123456 --max-rows-per-upload 5000`
+- Clean duplicate scalar values from a JSON object list:
+  `python ./src/main.py --clean -f ./test/data/single_replace.json`
+- Clean duplicate scalar values from a JSON array source:
+  `python ./src/main.py -s json_array --clean -f ./test/data/json_arrays.json`
+- Replace a `{{0}}` placeholder from a cleaned JSON array source:
+  `python ./src/main.py -s json_array --clean -f ./test/data/json_arrays.json -u "https://jsonplaceholder.typicode.com/posts/{{0}}"`
+- Replace placeholders from a JSON object source and send a JSON payload:
+  `python ./src/main.py -f ./test/data/multiple_replace.json -m POST -u "https://jsonplaceholder.typicode.com/posts/{{id}}" -p "{\"title\":\"{{name}}\",\"body\":\"{{map}}\",\"userId\":\"{{map_id}}\"}" -t 123456 -d 2.5`
+- Replace a single placeholder from CSV:
+  `python ./src/main.py -f ./test/data/single_replace.csv -s csv -m GET -u "https://jsonplaceholder.typicode.com/posts/{{post_num}}" -t 123456`
+- Replace multiple placeholders from CSV:
+  `python ./src/main.py -f ./test/data/multiple_replace.csv -s csv -m GET -u "https://jsonplaceholder.typicode.com/posts/1?param1={{replace_1}}&param2={{replace_2}}&param3={{replace_3}}" -t 123456`
+- Replace CSV placeholders inside a JSON payload:
+  `python ./src/main.py -f ./test/data/multiple_replace.csv -s csv -m POST -u "https://jsonplaceholder.typicode.com/posts/{{replace_1}}" -p "{\"title\":\"{{replace_1}}\",\"body\":\"{{replace_2}}\",\"userId\":\"{{replace_3}}\"}" -t 123456`
+- Upload a CSV file in batches:
+  `python ./src/main.py --upload-csv -f ./test/data/multiple_replace.csv -u "https://www.example.es/api/v3/upload-csv" -t 123456 --max-rows-per-upload 5000`
 
 #### AI coding agents
 
