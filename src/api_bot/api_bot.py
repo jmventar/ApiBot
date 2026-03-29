@@ -5,6 +5,7 @@ import pathlib
 import tempfile
 import time
 from datetime import datetime
+from urllib.parse import quote
 
 import requests
 from colorama import Fore, Style
@@ -38,14 +39,24 @@ class ApiBot:
         current_url = self.args.url.replace(r"{{", "#").replace(r"}}", "#")
 
         if self.args.source == JSON_ARRAY_SOURCE:
-            current_url = current_url.replace("#0#", str(value))
+            current_url = current_url.replace("#0#", self._encode_url_value(value))
         elif self.args.clean is True:
-            current_url = current_url.replace(f"#{self.placeholders[0]}#", str(value))
+            current_url = current_url.replace(
+                f"#{self.placeholders[0]}#",
+                self._encode_url_value(value),
+            )
         else:
             for p in self.placeholders:
-                current_url = current_url.replace(f"#{p}#", str(value[p]))
+                current_url = current_url.replace(
+                    f"#{p}#",
+                    self._encode_url_value(value[p]),
+                )
 
         return current_url
+
+    @staticmethod
+    def _encode_url_value(value):
+        return quote(str(value), safe="")
 
     def replace_payload_elements(self, value):
         if not self.args.payload:
@@ -131,6 +142,86 @@ class ApiBot:
             return {}
         return {"Authorization": f"Bearer {self.args.token}"}
 
+    def _get_response_byte_limit(self):
+        return self.args.max_response_bytes
+
+    @staticmethod
+    def _get_raw_response_body(response):
+        raw_content = getattr(response, "content", b"") or b""
+        if isinstance(raw_content, str):
+            return raw_content.encode("utf-8", errors="replace")
+        return raw_content
+
+    @staticmethod
+    def _close_response(response):
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
+
+    def _read_response_body(self, response):
+        content_type = response.headers.get("content-type")
+        max_bytes = self._get_response_byte_limit()
+        iter_content = getattr(response, "iter_content", None)
+
+        if not callable(iter_content):
+            response_body = self._get_raw_response_body(response)
+            truncated = len(response_body) > max_bytes
+            response_body = response_body[:max_bytes]
+            self._close_response(response)
+            return content_type, response_body, len(response_body), truncated
+
+        chunks = []
+        bytes_read = 0
+        truncated = False
+
+        try:
+            iterator = iter_content(chunk_size=8192)
+            for chunk in iterator:
+                if not chunk:
+                    continue
+
+                remaining = max_bytes - bytes_read
+                if remaining <= 0:
+                    truncated = True
+                    break
+
+                if len(chunk) <= remaining:
+                    chunks.append(chunk)
+                    bytes_read += len(chunk)
+                    continue
+
+                chunks.append(chunk[:remaining])
+                bytes_read += remaining
+                truncated = True
+                break
+        except TypeError:
+            response_body = self._get_raw_response_body(response)
+            truncated = len(response_body) > max_bytes
+            response_body = response_body[:max_bytes]
+            return content_type, response_body, len(response_body), truncated
+        finally:
+            self._close_response(response)
+
+        response_body = b"".join(chunks)
+        return content_type, response_body, len(response_body), truncated
+
+    def _parse_response_body(self, response, content_type, response_body, is_truncated):
+        if not response_body:
+            return None, False
+
+        response_text = response_body.decode(
+            response.encoding or "utf-8",
+            errors="replace",
+        )
+
+        if CONTENT_TYPE_JSON in (content_type or "").lower() and not is_truncated:
+            try:
+                return json.loads(response_text), True
+            except json.JSONDecodeError:
+                pass
+
+        return response_text, False
+
     def _prepare_upload_output_dir(self, csv_file: pathlib.Path) -> pathlib.Path:
         data_dir = pathlib.Path().resolve() / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -178,7 +269,8 @@ class ApiBot:
                         session,
                         method,
                         self.args.url,                    
-                        files=files
+                        files=files,
+                        timeout=self.args.timeout,
                     )
 
                 if response is not None:
@@ -230,7 +322,11 @@ class ApiBot:
                     current_url = self.replace_elements(elem)
                     json_data = self.replace_payload_elements(elem)
                     response = self.execute(
-                        session, method, current_url, json_data
+                        session,
+                        method,
+                        current_url,
+                        json_data,
+                        timeout=self.args.timeout,
                     )
 
                     if response is not None:
@@ -280,13 +376,15 @@ class ApiBot:
 
     def log_response(self, method, url, count, response):
         current_date_and_time = datetime.now()
-        result_content = response.headers.get("content-type")
-        result_length = response.headers.get("content-length")
-
-        if result_length is None:
-            result_length = len(response.content) if response.content is not None else 0
-        else:
-            result_length = int(result_length)
+        result_content, response_body, result_length, is_truncated = (
+            self._read_response_body(response)
+        )
+        response_data, should_store_result = self._parse_response_body(
+            response,
+            result_content,
+            response_body,
+            is_truncated,
+        )
 
         status_color = self.get_status_color(response.status_code)
         method_color = self.get_method_color(method)
@@ -294,20 +392,27 @@ class ApiBot:
             f"{Fore.LIGHTBLACK_EX} {count} {current_date_and_time} {Fore.RESET} "
             f"{method_color}{method}{Style.RESET_ALL} {url} : "
             f"{status_color}{response.status_code}{Style.RESET_ALL} "
-            f"content {result_content} {result_length} "
+            f"content {result_content} {result_length}"
+            f"{' [truncated]' if is_truncated else ''} "
         )
 
-        is_json_response: bool = False
-        if result_content is not None and CONTENT_TYPE_JSON in result_content:
-            response_json = response.json()
-            logging.info(f"{response_json}")
-            if isinstance(response_json, list):
-                self.response_data.extend(response_json)
-            else:
-                self.response_data.append(response_json)
-            is_json_response = True
+        if response_data is not None:
+            logging.info(f"{response_data}")
+            if should_store_result:
+                if isinstance(response_data, list):
+                    self.response_data.extend(response_data)
+                else:
+                    self.response_data.append(response_data)
 
-        log_data = ResponseLog(response, result_length, is_json_response)
+        log_data = ResponseLog(
+            method=method,
+            url=url,
+            status_code=response.status_code,
+            content_type=result_content,
+            content_length=result_length,
+            data=response_data,
+            truncated=is_truncated,
+        )
         self.response_log.append(log_data.to_json())
 
     @staticmethod
@@ -319,7 +424,7 @@ class ApiBot:
         )
 
     @staticmethod
-    def execute(session, method: str, url: str, json_data=None, files=None):
+    def execute(session, method: str, url: str, json_data=None, files=None, timeout=None):
         try:
             return session.request(
                 method,
@@ -328,6 +433,8 @@ class ApiBot:
                 json=json_data,
                 data=None, # NOT supported option
                 files=files,
+                timeout=timeout,
+                stream=True,
             )
         except RequestException as e:
             logging.error(f"Request failed: {e}")
