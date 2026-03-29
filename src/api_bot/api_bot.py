@@ -145,19 +145,30 @@ class ApiBot:
     def _get_response_byte_limit(self):
         return self.args.max_response_bytes
 
+    @staticmethod
+    def _get_raw_response_body(response):
+        raw_content = getattr(response, "content", b"") or b""
+        if isinstance(raw_content, str):
+            return raw_content.encode("utf-8", errors="replace")
+        return raw_content
+
+    @staticmethod
+    def _close_response(response):
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
+
     def _read_response_body(self, response):
+        content_type = response.headers.get("content-type")
         max_bytes = self._get_response_byte_limit()
         iter_content = getattr(response, "iter_content", None)
 
         if not callable(iter_content):
-            raw_content = getattr(response, "content", b"") or b""
-            if isinstance(raw_content, str):
-                raw_content = raw_content.encode("utf-8", errors="replace")
-            truncated = len(raw_content) > max_bytes
-            close = getattr(response, "close", None)
-            if callable(close):
-                close()
-            return raw_content[:max_bytes], truncated
+            response_body = self._get_raw_response_body(response)
+            truncated = len(response_body) > max_bytes
+            response_body = response_body[:max_bytes]
+            self._close_response(response)
+            return content_type, response_body, len(response_body), truncated
 
         chunks = []
         bytes_read = 0
@@ -184,17 +195,32 @@ class ApiBot:
                 truncated = True
                 break
         except TypeError:
-            raw_content = getattr(response, "content", b"") or b""
-            if isinstance(raw_content, str):
-                raw_content = raw_content.encode("utf-8", errors="replace")
-            truncated = len(raw_content) > max_bytes
-            return raw_content[:max_bytes], truncated
+            response_body = self._get_raw_response_body(response)
+            truncated = len(response_body) > max_bytes
+            response_body = response_body[:max_bytes]
+            return content_type, response_body, len(response_body), truncated
         finally:
-            close = getattr(response, "close", None)
-            if callable(close):
-                close()
+            self._close_response(response)
 
-        return b"".join(chunks), truncated
+        response_body = b"".join(chunks)
+        return content_type, response_body, len(response_body), truncated
+
+    def _parse_response_body(self, response, content_type, response_body, is_truncated):
+        if not response_body:
+            return None, False
+
+        response_text = response_body.decode(
+            response.encoding or "utf-8",
+            errors="replace",
+        )
+
+        if CONTENT_TYPE_JSON in (content_type or "").lower() and not is_truncated:
+            try:
+                return json.loads(response_text), True
+            except json.JSONDecodeError:
+                pass
+
+        return response_text, False
 
     def _prepare_upload_output_dir(self, csv_file: pathlib.Path) -> pathlib.Path:
         data_dir = pathlib.Path().resolve() / "data"
@@ -350,9 +376,15 @@ class ApiBot:
 
     def log_response(self, method, url, count, response):
         current_date_and_time = datetime.now()
-        result_content = response.headers.get("content-type")
-        response_body, is_truncated = self._read_response_body(response)
-        result_length = len(response_body)
+        result_content, response_body, result_length, is_truncated = (
+            self._read_response_body(response)
+        )
+        response_data, should_store_result = self._parse_response_body(
+            response,
+            result_content,
+            response_body,
+            is_truncated,
+        )
 
         status_color = self.get_status_color(response.status_code)
         method_color = self.get_method_color(method)
@@ -364,27 +396,13 @@ class ApiBot:
             f"{' [truncated]' if is_truncated else ''} "
         )
 
-        response_data = None
-        content_type = result_content.lower() if result_content is not None else ""
-        if result_length > 0:
-            response_text = response_body.decode(
-                response.encoding or "utf-8",
-                errors="replace",
-            )
-            if CONTENT_TYPE_JSON in content_type and not is_truncated:
-                try:
-                    response_data = json.loads(response_text)
-                    logging.info(f"{response_data}")
-                    if isinstance(response_data, list):
-                        self.response_data.extend(response_data)
-                    else:
-                        self.response_data.append(response_data)
-                except json.JSONDecodeError:
-                    response_data = response_text
-                    logging.info(f"{response_data}")
-            else:
-                response_data = response_text
-                logging.info(f"{response_data}")
+        if response_data is not None:
+            logging.info(f"{response_data}")
+            if should_store_result:
+                if isinstance(response_data, list):
+                    self.response_data.extend(response_data)
+                else:
+                    self.response_data.append(response_data)
 
         log_data = ResponseLog(
             method=method,

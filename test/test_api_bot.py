@@ -591,6 +591,23 @@ def test_log_response_truncates_oversized_body():
     assert bot.response_log[0]["data"] == "abcd"
 
 
+def test_log_response_keeps_truncated_json_as_text():
+    bot = ApiBot(MockArgs(max_response_bytes=5), [], ["0"])
+
+    response = MagicMock()
+    response.status_code = 200
+    response.headers = {"content-type": "application/json"}
+    response.encoding = "utf-8"
+    response.iter_content.return_value = [b'{"key":"value"}']
+
+    bot.log_response("GET", "http://example.com/items/1", 1, response)
+
+    assert bot.response_data == []
+    assert bot.response_log[0]["content-length"] == 5
+    assert bot.response_log[0]["content-truncated"] is True
+    assert bot.response_log[0]["data"] == '{"key'
+
+
 # ============================================================
 # run (integration-level)
 # ============================================================
